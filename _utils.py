@@ -5,7 +5,7 @@ from typing import Any, Iterable, Type
 import yaml
 from _types import AppConfig
 from autogen_core import MessageSerializer, try_get_known_serializers_for_type
-from autogen_ext.models.openai.config import AzureOpenAIClientConfiguration
+from autogen_ext.models.openai.config import OpenAIClientConfiguration
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
 
@@ -24,7 +24,7 @@ def load_config(file_path: str = os.path.join(os.path.dirname(__file__), "config
             DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
         )
 
-    app_config.client_config = AzureOpenAIClientConfiguration(**model_client, **aad_params)  # type: ignore[typeddict-item]
+    app_config.client_config = OpenAIClientConfiguration(**model_client)  # type: ignore[typeddict-item]
     return app_config
 
 

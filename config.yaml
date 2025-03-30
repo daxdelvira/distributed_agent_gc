@@ -23,7 +23,7 @@ ui_agent:
     max: 0.1
 
 client_config:
-  model: "gpt-4o"
+  model: "Qwen/Qwen2.5-14B-Instruct"
   azure_endpoint: "https://{your-custom-endpoint}.openai.azure.com"
   azure_deployment: "{your-azure-deployment}"
   api_version: "2024-08-01-preview"

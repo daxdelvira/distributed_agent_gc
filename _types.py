@@ -4,7 +4,7 @@ from typing import Dict
 from autogen_core.models import (
     LLMMessage,
 )
-from autogen_ext.models.openai.config import AzureOpenAIClientConfiguration
+from autogen_ext.models.openai.config import OpenAIClientConfiguration
 from pydantic import BaseModel
 
 
@@ -75,4 +75,4 @@ class AppConfig(BaseModel):
     writer_agent: ChatAgentConfig
     editor_agent: ChatAgentConfig
     ui_agent: UIAgentConfig
-    client_config: AzureOpenAIClientConfiguration = None  # type: ignore[assignment] # This was required to do custom instantiation in `load_config`
+    client_config: OpenAIClientConfiguration = None  # type: ignore[assignment] # This was required to do custom instantiation in `load_config`
