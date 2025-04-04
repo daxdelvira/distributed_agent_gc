@@ -25,7 +25,7 @@ ui_agent:
 client_config:
   model: "Qwen/Qwen2.5-14B-Instruct"
   base_url: "http://localhost:8000/v1"
-  api_key: ""
+  api_key: "placeholder"
   model_capabilities:
     vision: False
     function_calling: True
