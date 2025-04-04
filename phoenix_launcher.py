@@ -5,12 +5,16 @@ import os
 # Create log directory if not exists
 os.makedirs("logs", exist_ok=True)
 
+# Track all launched processes
+processes = []
+
 def run_command(command, log_file, env=None, cores=None):
     cmd = command
     if cores is not None:
         cmd = ["taskset", "-c", cores] + command
     with open(log_file, "w") as out:
-        subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, env=env)
+        proc = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, env=env)
+    return proc
 
 # ---------------------------
 # Launch vLLM (GPUs 0,1)
@@ -21,7 +25,7 @@ print("Starting Qwen-14B-Instruct on vLLM with GPUs 0,1...")
 vllm_env = os.environ.copy()
 vllm_env["CUDA_VISIBLE_DEVICES"] = "0,1"
 
-run_command(
+processes.append(run_command(
     [
         "python", "-m", "vllm.entrypoints.openai.api_server",
         "--model", "Qwen/Qwen2.5-14B-Instruct",
@@ -31,7 +35,7 @@ run_command(
     "logs/vllm.log",
     env=vllm_env,
     cores="0-11"
-)
+))
 
 # Wait for vLLM API to be ready
 print("Waiting for vLLM to become available...")
@@ -57,23 +61,29 @@ else:
 # ---------------------------
 
 print("Launching Host Runtime")
-run_command(["python", "run_host.py"], "logs/host.log")
+processes.append(run_command(["python", "run_host.py"], "logs/host.log"))
 time.sleep(2)
 
 print("Launching Writer Agent")
-run_command(["python", "run_writer_agent.py"], "logs/writer.log", cores="0")
+processes.append(run_command(["python", "run_writer_agent.py"], "logs/writer.log", cores="0"))
 time.sleep(1)
 
 print("Launching Editor Agent")
-run_command(["python", "run_editor_agent.py"], "logs/editor.log", cores="1")
+processes.append(run_command(["python", "run_editor_agent.py"], "logs/editor.log", cores="1"))
 time.sleep(1)
 
 print("Launching Group Chat Manager")
-run_command(["python", "run_group_chat_manager.py"], "logs/manager.log", cores="2")
+processes.append(run_command(["python", "run_group_chat_manager.py"], "logs/manager.log", cores="2"))
 time.sleep(1)
 
 print("Launching UI Agent")
-run_command(["python", "run_ui.py"], "logs/ui.log", cores="3")
+processes.append(run_command(["python", "run_ui.py"], "logs/ui.log", cores="3"))
 time.sleep(1)
 
-print("All agents launched.")
+print("All agents launched. Waiting for them to finish...")
+
+# Wait for all processes to complete
+for proc in processes:
+    proc.wait()
+
+print("All agents have exited.")
