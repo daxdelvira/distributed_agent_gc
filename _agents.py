@@ -35,6 +35,15 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history: List[LLMMessage] = []
         self._ui_config = ui_config
         self.console = Console()
+        self._state_report_message = SystemMessage(content=""" Please provide updates to the state based on your last message and the previous state, if any. Use the following JSON format, replacing the 'type' values with the actual values. 
+        {
+            "writer_topic": str,
+            "writer_total_lines_written": int,
+            "editor_feedback_addressed": boolean,
+            "editor_num_lines_edited": int,
+        }
+        """)
+        self._state_history: List[LLMMessage] = []
 
     @message_handler
     async def handle_message(self, message: GroupChatMessage, ctx: MessageContext) -> None:
@@ -52,7 +61,14 @@ class BaseGroupChatAgent(RoutedAgent):
         )
         completion = await self._model_client.create([self._system_message] + self._chat_history)
         assert isinstance(completion.content, str)
-        self._chat_history.append(AssistantMessage(content=completion.content, source=self.id.type))
+        new_message = AssistantMessage(content=completion.content, source=self.id.type)
+        self._chat_history.append(new_message)
+
+        state = await self._model_client.create(
+            [self._state_report_message] + self._state_history + [new_message]
+        )
+        new_state = AssistantMessage(content=state.content, source=self.id.type)
+        self._state_history.append(new_state)
 
         console_message = f"\n{'-'*80}\n**{self.id.type}**: {completion.content}"
         self.console.print(Markdown(console_message))

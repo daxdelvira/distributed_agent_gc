@@ -12,6 +12,8 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
+from agent_metrics import init_metrics
+init_metrics("group_chat_manager")
 
 set_all_log_levels(logging.ERROR)
 
