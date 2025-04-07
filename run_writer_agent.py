@@ -43,7 +43,7 @@ async def main(config: AppConfig) -> None:
     )
 
     await writer_agent_runtime.stop_when_signal()
-    save_metrics_to_csv_and_cdfs("writer_metrics")
+    save_metrics_to_csv_and_cdfs("writer_metrics_state_traced")
 
 
 if __name__ == "__main__":
