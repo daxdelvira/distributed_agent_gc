@@ -12,8 +12,8 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_metrics import init_metrics
-init_metrics("group_chat_manager")
+from agent_timeslices import save_metrics_to_csv_and_cdfs
+
 
 set_all_log_levels(logging.ERROR)
 
@@ -70,9 +70,11 @@ async def main(config: AppConfig):
     await group_chat_manager_runtime.stop_when_signal()
     await model_client.close()
     Console().print("Manager left the chat!")
+    save_metrics_to_csv_and_cdfs("group_chat_manager_metrics")
 
 
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
     asyncio.run(main(load_config()))
+

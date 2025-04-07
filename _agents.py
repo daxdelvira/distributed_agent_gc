@@ -15,6 +15,7 @@ from autogen_core.models import (
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
+from agent_timeslices import track_time_and_memory
 
 
 class BaseGroupChatAgent(RoutedAgent):
@@ -55,6 +56,7 @@ class BaseGroupChatAgent(RoutedAgent):
         )
 
     @message_handler
+    @track_time_and_memory(get_label=lambda self: self.id.type)
     async def handle_request_to_speak(self, message: RequestToSpeak, ctx: MessageContext) -> None:
         self._chat_history.append(
             UserMessage(content=f"Transferred to {self.id.type}, adopt the persona immediately.", source="system")

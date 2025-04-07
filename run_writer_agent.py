@@ -12,8 +12,7 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_metrics import init_metrics
-init_metrics("writer_agent")
+from agent_timeslices import save_metrics_to_csv_and_cdfs
 
 
 
@@ -44,6 +43,7 @@ async def main(config: AppConfig) -> None:
     )
 
     await writer_agent_runtime.stop_when_signal()
+    save_metrics_to_csv_and_cdfs("writer_metrics")
 
 
 if __name__ == "__main__":
