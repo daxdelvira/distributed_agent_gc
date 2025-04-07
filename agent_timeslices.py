@@ -6,6 +6,7 @@ import os
 from typing import Callable, Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
+import functools
 
 # Use Gruvbox dark theme style
 plt.style.use("dark_background")
@@ -18,6 +19,7 @@ def track_time_and_memory(get_label: Callable = lambda self: "unknown"):
     Decorator to measure execution time and peak memory usage.
     """
     def decorator(func):
+        @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
             thread_id = threading.get_ident()
             agent_label = get_label(self)
