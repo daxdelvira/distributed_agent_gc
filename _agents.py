@@ -105,6 +105,7 @@ class GroupChatManager(RoutedAgent):
         self._ui_config = ui_config
 
     @message_handler
+    @track_time_and_memory(get_label=lambda self: self.id.type)
     async def handle_message(self, message: GroupChatMessage, ctx: MessageContext) -> None:
         assert isinstance(message.body, UserMessage)
 
