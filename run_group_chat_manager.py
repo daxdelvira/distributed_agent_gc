@@ -69,8 +69,9 @@ async def main(config: AppConfig):
 
     await group_chat_manager_runtime.stop_when_signal()
     await model_client.close()
-    Console().print("Manager left the chat!")
     save_metrics_to_csv_and_cdfs("group_chat_manager_metrics")
+    Console().print("Manager left the chat!")
+    
 
 
 if __name__ == "__main__":
