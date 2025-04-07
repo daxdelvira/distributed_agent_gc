@@ -16,7 +16,9 @@ from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
 from agent_timeslices import track_time_and_memory
-
+from state_updater import extract_valid_json, validate_keys, apply_state_update
+from unified_state_config import PREDEFINED_STATE
+from unified_state import UnifiedState
 
 class BaseGroupChatAgent(RoutedAgent):
     """A group chat participant using an LLM."""
@@ -66,9 +68,17 @@ class BaseGroupChatAgent(RoutedAgent):
         new_message = AssistantMessage(content=completion.content, source=self.id.type)
         self._chat_history.append(new_message)
 
-        state = await self._model_client.create(
+        needsState = True
+        while needsState:
+            state = await self._model_client.create(
             [self._state_report_message] + self._state_history + [new_message]
-        )
+            )
+            parsed = extract_valid_json(state.content)
+            if parsed and validate_keys(parsed, set(PREDEFINED_STATE.keys())):
+                needsState = False
+                apply_state_update(UnifiedState, parsed)  # type: ignore[call-arg]
+        
+
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)
 
