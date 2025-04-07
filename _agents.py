@@ -18,7 +18,7 @@ from rich.markdown import Markdown
 from agent_timeslices import track_time_and_memory
 from state_updater import extract_valid_json, validate_keys, apply_state_update
 from unified_state_config import PREDEFINED_STATE
-from unified_state import UnifiedState
+from unified_state import shared_unified_state
 
 class BaseGroupChatAgent(RoutedAgent):
     """A group chat participant using an LLM."""
@@ -76,7 +76,7 @@ class BaseGroupChatAgent(RoutedAgent):
             parsed = extract_valid_json(state.content)
             if parsed and validate_keys(parsed, set(PREDEFINED_STATE.keys())):
                 needsState = False
-                apply_state_update(UnifiedState, parsed)  # type: ignore[call-arg]
+                apply_state_update(shared_unified_state, parsed)  # type: ignore[call-arg]
         
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)

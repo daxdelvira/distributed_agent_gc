@@ -5,6 +5,7 @@ each other.
 from dataclasses import dataclass, field
 from typing import Any, Dict
 from multiprocessing import Lock, Manager
+from unified_state_config import PREDEFINED_STATE  # Assuming this is defined elsewhere
 
 class UnifiedState:
     def __init__(self, schema: Dict[str, Any]):
@@ -35,3 +36,5 @@ class UnifiedState:
                     self.memory[key] = value
                 else:
                     raise KeyError(f"Key '{key}' not in schema.")
+                
+shared_unified_state = UnifiedState(schema=PREDEFINED_STATE)  # Assuming PREDEFINED_STATE is defined elsewhere
