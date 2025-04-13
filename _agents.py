@@ -2,8 +2,6 @@ import asyncio
 import random
 from typing import Awaitable, Callable, List
 from uuid import uuid4
-from scripts_for_ot_v.timestep_span_manager import TimestepSpanManager
-from opentelemetry import trace
 
 
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
