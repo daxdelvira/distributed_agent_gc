@@ -2,6 +2,9 @@ import asyncio
 import random
 from typing import Awaitable, Callable, List
 from uuid import uuid4
+from scripts_for_ot_v.timestep_span_manager import TimestepSpanManager
+from opentelemetry import trace
+
 
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
@@ -76,7 +79,8 @@ class BaseGroupChatAgent(RoutedAgent):
             parsed = extract_valid_json(state.content)
             if parsed and validate_keys(parsed, set(PREDEFINED_STATE.keys())):
                 needsState = False
-                apply_state_update(shared_unified_state, parsed)  # type: ignore[call-arg]
+                apply_state_update(shared_unified_state, parsed)
+                  # type: ignore[call-arg]
         
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
