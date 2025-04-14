@@ -73,10 +73,12 @@ class InMemorySpanExporter(SpanExporter):
         self._spans = []
 
 # Initialize exporter and tracer
+# Initialize and register tracer + exporter
 exporter = InMemorySpanExporter()
-provider = TracerProvider()
-provider.add_span_processor(SimpleSpanProcessor(exporter))
-trace.set_tracer_provider(provider)
+trace.set_tracer_provider(
+    TracerProvider(resource=Resource.create({"service.name": "agentic-system"}))
+)
+trace.get_tracer_provider().add_span_processor(SimpleSpanProcessor(exporter))
 tracer = trace.get_tracer(__name__)
 
 class BaseGroupChatAgent(RoutedAgent):
