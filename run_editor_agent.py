@@ -44,8 +44,8 @@ async def main(config: AppConfig):
 
     await editor_agent_runtime.stop_when_signal()
     await model_client.close()
-    save_metrics_to_csv_and_cdfs("editor_metrics_state_traced_50var")
-    export_metrics_to_csv(export_metrics, "editor_metrics_state_traced_export_50var.csv")
+    save_metrics_to_csv_and_cdfs("editor_metrics_state_traced_10var")
+    export_metrics_to_csv(export_metrics, "editor_metrics_state_traced_export_10var.csv")
 
 
 if __name__ == "__main__":
