@@ -41,3 +41,17 @@ def set_all_log_levels(log_leve: int):
     for _, logger in logging.root.manager.loggerDict.items():
         if isinstance(logger, logging.Logger):  # Ensure it's actually a Logger object
             logger.setLevel(log_leve)  # Adjust to DEBUG or another level as needed
+
+
+def export_metrics_to_csv(metrics, filename="agent_export_metrics.csv"):
+    if not metrics:
+        print("No metrics to export.")
+        return
+
+    keys = metrics[0].keys()
+    with open(filename, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(metrics)
+
+    print(f"Exported {len(metrics)} rows to {filename}")

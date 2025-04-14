@@ -4,7 +4,7 @@ import warnings
 
 from _agents import BaseGroupChatAgent
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
-from _utils import get_serializers, load_config, set_all_log_levels
+from _utils import get_serializers, load_config, set_all_log_levels, export_metrics_to_csv
 from autogen_core import (
     TypeSubscription,
 )
@@ -13,6 +13,7 @@ from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
 from agent_timeslices import save_metrics_to_csv_and_cdfs
+from _agents import export_metrics
 
 
 async def main(config: AppConfig):
@@ -44,6 +45,7 @@ async def main(config: AppConfig):
     await editor_agent_runtime.stop_when_signal()
     await model_client.close()
     save_metrics_to_csv_and_cdfs("editor_metrics_state_traced")
+    export_metrics_to_csv(export_metrics, "editor_metrics_state_traced.csv")
 
 
 if __name__ == "__main__":

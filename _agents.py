@@ -1,8 +1,13 @@
 import asyncio
 import random
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable, List, Dict
 from uuid import uuid4
 
+from opentelemetry import trace
+from opentelemetry.trace import TracerProvider
+from opentelemetry.sdk.trace import ReadableSpan, Span
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, SimpleSpanProcessor
+from opentelemetry.sdk.resources import Resource
 
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
@@ -20,6 +25,58 @@ from agent_timeslices import track_time_and_memory
 from state_updater import extract_valid_json, validate_keys, apply_state_update
 from unified_state_config import PREDEFINED_STATE
 from unified_state import shared_unified_state
+import time
+import threading
+import tracemalloc
+
+export_metrics: List[Dict] = []
+
+class TimeAndMemoryTracker:
+    def __init__(self, agent_label: str, function_name: str):
+        self.agent_label = agent_label
+        self.function_name = function_name
+        self.thread_id = threading.get_ident()
+
+    def __enter__(self):
+        self.start_time = time.perf_counter()
+        tracemalloc.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        end_time = time.perf_counter()
+        duration = end_time - self.start_time
+
+        metric = {
+            "agent": self.agent_label,
+            "function": self.function_name,
+            "thread_id": self.thread_id,
+            "duration_sec": duration,
+            "peak_memory_bytes": peak,
+        }
+        export_metrics.append(metric)
+
+class InMemorySpanExporter(SpanExporter):
+    def __init__(self):
+        self._spans: List[ReadableSpan] = []
+
+    def export(self, spans: List[ReadableSpan]) -> SpanExportResult:
+        self._spans.extend(spans)
+        return SpanExportResult.SUCCESS
+
+    def get_finished_spans(self) -> List[ReadableSpan]:
+        return self._spans
+
+    def clear(self):
+        self._spans = []
+
+# Initialize exporter and tracer
+exporter = InMemorySpanExporter()
+provider = TracerProvider(resource=Resource.create({"service.name": "agentic-system"}))
+provider.add_span_processor(SimpleSpanProcessor(exporter))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)
 
 class BaseGroupChatAgent(RoutedAgent):
     """A group chat participant using an LLM."""
@@ -172,7 +229,18 @@ class BaseGroupChatAgent(RoutedAgent):
             parsed = extract_valid_json(state.content)
             if parsed and validate_keys(parsed, set(PREDEFINED_STATE.keys())):
                 needsState = False
-                apply_state_update(shared_unified_state, parsed)
+                with TimeAndMemoryTracker(agent_label=self.id.type, function_name="apply_state_update"):
+                    apply_state_update(shared_unified_state, parsed)
+                    with tracer.start_as_current_span(f"state:{self.id.type}") as span:
+                        span.set_attribute("agent_id", self.id.type)
+
+                        # Each key-value in state becomes a span attribute
+                        for k, v in parsed.items():
+                            attr_key = f"state.{k}"
+                            try:
+                                span.set_attribute(attr_key, v)
+                            except Exception:
+                                span.set_attribute(attr_key, str(v))
                   # type: ignore[call-arg]
         
 
