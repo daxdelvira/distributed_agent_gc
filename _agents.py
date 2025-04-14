@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, List, Dict
 from uuid import uuid4
 
 from opentelemetry import trace
-from opentelemetry.trace import TracerProvider
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace import ReadableSpan, Span
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, SimpleSpanProcessor
 from opentelemetry.sdk.resources import Resource
@@ -76,7 +76,7 @@ class InMemorySpanExporter(SpanExporter):
 # Initialize and register tracer + exporter
 exporter = InMemorySpanExporter()
 trace.set_tracer_provider(
-    TracerProvider(resource=Resource.create({"service.name": "agentic-system"}))
+    TracerProvider()
 )
 trace.get_tracer_provider().add_span_processor(SimpleSpanProcessor(exporter))
 tracer = trace.get_tracer(__name__)
@@ -100,9 +100,9 @@ class BaseGroupChatAgent(RoutedAgent):
         self._ui_config = ui_config
         self.console = Console()
         self._state_report_message = SystemMessage(
-            content=""" 
-            Please provide updates to the state based on your last message and the previous state, if any. 
-            Use the following JSON format, replacing the 'type' values with the actual values. 
+            content="""
+            Please provide updates to the state based on your last message and the previous state, if any.
+            Use the following JSON format, replacing the 'type' values with the actual values.
             {
             "writer_topic": "None",
             "writer_total_lines_written": 0,
@@ -245,7 +245,7 @@ class BaseGroupChatAgent(RoutedAgent):
                             except Exception:
                                 span.set_attribute(attr_key, str(v))
                   # type: ignore[call-arg]
-        
+
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)

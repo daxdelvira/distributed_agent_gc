@@ -1,0 +1,10 @@
+agent,function,thread_id,duration_sec,peak_memory_bytes
+group_chat_manager,handle_message,23456246748992,0.6003416839521378,4451030
+group_chat_manager,handle_message,23456246748992,0.06810556002892554,299155
+group_chat_manager,handle_message,23456246748992,0.06777222501114011,298713
+group_chat_manager,handle_message,23456246748992,0.07599406596273184,309789
+group_chat_manager,handle_message,23456246748992,0.07213496102485806,298993
+group_chat_manager,handle_message,23456246748992,0.1169839600333944,299633
+group_chat_manager,handle_message,23456246748992,0.6273792149731889,310685
+group_chat_manager,handle_message,23456246748992,0.08776171307545155,300601
+group_chat_manager,handle_message,23456246748992,0.9676920330384746,310855
