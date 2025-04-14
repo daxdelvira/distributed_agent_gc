@@ -1,0 +1,8 @@
+agent,function,thread_id,duration_sec,peak_memory_bytes
+group_chat_manager,handle_message,23456246744896,1.0684985739644617,4451038
+group_chat_manager,handle_message,23456246744896,0.08082223299425095,299218
+group_chat_manager,handle_message,23456246744896,0.05553871695883572,298729
+group_chat_manager,handle_message,23456246744896,0.07770918705500662,309933
+group_chat_manager,handle_message,23456246744896,2.5669003980001435,299164
+group_chat_manager,handle_message,23456246744896,0.208886030013673,310848
+group_chat_manager,handle_message,23456246744896,1.0025846320204437,300829

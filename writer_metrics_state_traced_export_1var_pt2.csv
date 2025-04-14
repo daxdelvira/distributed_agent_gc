@@ -1,0 +1,4 @@
+agent,function,thread_id,duration_sec,peak_memory_bytes
+Writer,apply_state_update,23456246744896,0.002620963961817324,4465192
+Writer,apply_state_update,23456246744896,0.0003956869477406144,346900
+Writer,apply_state_update,23456246744896,0.0004313690587878227,386992

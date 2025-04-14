@@ -1,0 +1,5 @@
+agent,function,thread_id,duration_sec,peak_memory_bytes
+Editor,handle_request_to_speak,23456246748992,2.5423075470607728,0
+Editor,handle_request_to_speak,23456246748992,7.550917585962452,0
+Editor,handle_request_to_speak,23456246748992,1.6665159959811717,0
+Editor,handle_request_to_speak,23456246748992,1.955670390976593,0

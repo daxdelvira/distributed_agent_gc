@@ -1,0 +1,4 @@
+agent,function,thread_id,duration_sec,peak_memory_bytes
+Editor,apply_state_update,23456246744896,0.0016285110032185912,4473166
+Editor,apply_state_update,23456246744896,0.00040694803465157747,361248
+Editor,apply_state_update,23456246744896,0.0004558300133794546,391098

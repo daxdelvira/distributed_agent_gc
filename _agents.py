@@ -102,7 +102,7 @@ class BaseGroupChatAgent(RoutedAgent):
         self._state_report_message = SystemMessage(
             content="""
             Please provide updates to the state based on your last message and the previous state, if any.
-            Use the following JSON format, replacing the 'type' values with the actual values.
+            Use the following JSON format, replacing the 'None' value with the actual value.
             {
                 "writer_topic": "None",
             }
