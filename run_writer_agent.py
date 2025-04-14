@@ -2,9 +2,9 @@ import asyncio
 import logging
 import warnings
 
-from _agents import BaseGroupChatAgent
+from _agents import BaseGroupChatAgent, export_metrics
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
-from _utils import get_serializers, load_config, set_all_log_levels
+from _utils import get_serializers, load_config, set_all_log_levels, export_metrics_to_csv
 from autogen_core import (
     TypeSubscription,
 )
@@ -43,8 +43,8 @@ async def main(config: AppConfig) -> None:
     )
 
     await writer_agent_runtime.stop_when_signal()
-    save_metrics_to_csv_and_cdfs("writer_metrics_state_traced")
-
+    save_metrics_to_csv_and_cdfs("writer_metrics_state_traced_50var")
+    export_metrics_to_csv(export_metrics, "writer_metrics_state_traced_export_50var.csv")
 
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
