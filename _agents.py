@@ -10,6 +10,7 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, Simpl
 from opentelemetry.sdk.resources import Resource
 
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
+from _utils import export_metrics_to_csv
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
 from autogen_core.models import (
     AssistantMessage,
@@ -73,7 +74,7 @@ class InMemorySpanExporter(SpanExporter):
 
 # Initialize exporter and tracer
 exporter = InMemorySpanExporter()
-provider = TracerProvider(resource=Resource.create({"service.name": "agentic-system"}))
+provider = TracerProvider()
 provider.add_span_processor(SimpleSpanProcessor(exporter))
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
