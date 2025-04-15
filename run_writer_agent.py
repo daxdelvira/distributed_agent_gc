@@ -13,10 +13,25 @@ from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
 from agent_timeslices import save_metrics_to_csv_and_cdfs
+from datetime import datetime
+from experiment_context import ExperimentContext
+import argparse
+import json
+from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
+    return parser.parse_args()   
+args = parse_args()
 
+with open(args.config, "r") as f:
+    config_data = json.load(f)
 
-async def main(config: AppConfig) -> None:
+state_vars = config_data["state_vars"]
+experiment = ExperimentContext(config_data["experiment"])
+
+async def main(config: AppConfig, state_vars: dict) -> None:
     set_all_log_levels(logging.ERROR)
     writer_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     writer_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
@@ -32,6 +47,8 @@ async def main(config: AppConfig) -> None:
             group_chat_topic_type=config.group_chat_manager.topic_type,
             system_message=config.writer_agent.system_message,
             model_client=OpenAIChatCompletionClient(**config.client_config),
+            state_vars=state_vars,
+            experiment=experiment,
             ui_config=config.ui_agent,
         ),
     )
@@ -43,8 +60,10 @@ async def main(config: AppConfig) -> None:
     )
 
     await writer_agent_runtime.stop_when_signal()
-    save_metrics_to_csv_and_cdfs("writer_metrics_state_traced_1var_pt2")
-    export_metrics_to_csv(export_metrics, "writer_metrics_state_traced_export_1var_pt2.csv")
+    now = datetime.now()
+    timestamp = now.strftime( "%Y-%m-%d_%H-%M")
+    save_metrics_to_csv_and_cdfs(f"writer_metrics_state_traced_1var_{timestamp}")
+    export_metrics_to_csv(export_metrics, f"writer_metrics_state_traced_export_1var_{timestamp}.csv")
 
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)

@@ -1,16 +1,13 @@
 import asyncio
 import random
+import json
 from typing import Awaitable, Callable, List, Dict
 from uuid import uuid4
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace import ReadableSpan, Span
-from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, SimpleSpanProcessor
-from opentelemetry.sdk.resources import Resource
-
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
 from _utils import export_metrics_to_csv
+from _tracking_utils import TimeAndMemoryTracker
+from _tracing_utils import tracer
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
 from autogen_core.models import (
     AssistantMessage,
@@ -24,62 +21,10 @@ from rich.console import Console
 from rich.markdown import Markdown
 from agent_timeslices import track_time_and_memory
 from state_updater import extract_valid_json, validate_keys, apply_state_update
-from unified_state_config import PREDEFINED_STATE
+from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
 from unified_state import shared_unified_state
-import time
-import threading
-import tracemalloc
+from experiment_context import ExperimentContext
 
-export_metrics: List[Dict] = []
-
-class TimeAndMemoryTracker:
-    def __init__(self, agent_label: str, function_name: str):
-        self.agent_label = agent_label
-        self.function_name = function_name
-        self.thread_id = threading.get_ident()
-
-    def __enter__(self):
-        self.start_time = time.perf_counter()
-        tracemalloc.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        end_time = time.perf_counter()
-        duration = end_time - self.start_time
-
-        metric = {
-            "agent": self.agent_label,
-            "function": self.function_name,
-            "thread_id": self.thread_id,
-            "duration_sec": duration,
-            "peak_memory_bytes": peak,
-        }
-        export_metrics.append(metric)
-
-class InMemorySpanExporter(SpanExporter):
-    def __init__(self):
-        self._spans: List[ReadableSpan] = []
-
-    def export(self, spans: List[ReadableSpan]) -> SpanExportResult:
-        self._spans.extend(spans)
-        return SpanExportResult.SUCCESS
-
-    def get_finished_spans(self) -> List[ReadableSpan]:
-        return self._spans
-
-    def clear(self):
-        self._spans = []
-
-# Initialize exporter and tracer
-# Initialize and register tracer + exporter
-exporter = InMemorySpanExporter()
-trace.set_tracer_provider(
-    TracerProvider()
-)
-trace.get_tracer_provider().add_span_processor(SimpleSpanProcessor(exporter))
-tracer = trace.get_tracer(__name__)
 
 class BaseGroupChatAgent(RoutedAgent):
     """A group chat participant using an LLM."""
@@ -89,6 +34,8 @@ class BaseGroupChatAgent(RoutedAgent):
         description: str,
         group_chat_topic_type: str,
         model_client: ChatCompletionClient,
+        state_vars: dict,
+        experiment: ExperimentContext,
         system_message: str,
         ui_config: UIAgentConfig,
     ) -> None:
@@ -99,13 +46,14 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history: List[LLMMessage] = []
         self._ui_config = ui_config
         self.console = Console()
+        self._state_schema = state_vars
+        self._state_json_str = json.dumps(state_vars, indent=4)
+        self._experiment = experiment,
         self._state_report_message = SystemMessage(
             content="""
             Please provide updates to the state based on your last message and the previous state, if any.
             Use the following JSON format, replacing the 'None' value with the actual value.
-            {
-                "writer_topic": "None",
-            }
+            f"{self._state_json_str}"
             """
         )
         self._state_history: List[LLMMessage] = []
@@ -132,11 +80,12 @@ class BaseGroupChatAgent(RoutedAgent):
 
         needsState = True
         while needsState:
-            state = await self._model_client.create(
-            [self._state_report_message] + self._state_history + [new_message]
-            )
+            with TimeAndMemoryTracker(agent_label=self.id.type, function_name="state_report"):
+                state = await self._model_client.create(
+                    [self._state_report_message] + self._state_history + [new_message]
+                    )
             parsed = extract_valid_json(state.content)
-            if parsed and validate_keys(parsed, set(PREDEFINED_STATE.keys())):
+            if parsed and validate_keys(parsed, set(self._state_vars.keys())):
                 needsState = False
                 with TimeAndMemoryTracker(agent_label=self.id.type, function_name="apply_state_update"):
                     apply_state_update(shared_unified_state, parsed)

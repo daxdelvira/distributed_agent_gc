@@ -1,6 +1,33 @@
 import subprocess
 import time
 import os
+import argparse
+import json
+from unified_state import UnifiedState
+from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE # Ensure this is defined in unified_state.py
+
+#-------------------------------
+# Argument parsing
+#-------------------------------
+def parse_args():
+    parser = argparse.ArgumentParse()
+    parser.add_argument("--state-vars", type=str, default="1", choices=[1, 5, 10, 50, 100], help="Number of state variables to use (1, 5, 10, 50, 100)")
+    parser.add_argument("--experiment", type=str, default="none", choices=["llm-latency", "per-agent-memory", "central-log-memory", "state-update-comms"], help="Experiment to run")
+    return parser.parse_args()
+
+args = parse_args()
+print(f"Running experiment: {args.experiment} with {args.state_vars} state variables")
+
+#---------------------------
+# Create experiment config
+#---------------------------
+experiment_config = {
+    "experiment": args.experiment,
+    "state_vars": args.state_vars,
+    "timestamp": time.strftime("%Y-%m-%d_%H-%M")
+}
+with open("experiment_config.json", "w") as f:
+    json.dump(experiment_config, f, indent=4)
 
 # Create log directory if not exists
 os.makedirs("logs", exist_ok=True)
@@ -56,24 +83,39 @@ if ready:
 else:
     print("Failed to detect vLLM API. Continuing anyway...")
 
+
+# ------------------------------------------
+# Create unified state w/ith selected schema
+# ------------------------------------------
+
+state_map = {
+    1: ONE_VAR_STATE,
+    5: FIVE_VAR_STATE,
+    10: TEN_VAR_STATE,
+    50: FIFTY_VAR_STATE,
+    100: HUNDRED_VAR_STATE,
+}
+selected_state = state_map[args.state_vars]
+unified_state = UnifiedState(schema=selected_state)
+
 # ---------------------------
 # Launch the Agents
 # ---------------------------
 
 print("Launching Host Runtime")
-processes.append(run_command(["python", "run_host.py"], "logs/host.log"))
+processes.append(run_command(["python", "run_host.py", "--config"], "logs/host.log"))
 time.sleep(2)
 
 print("Launching Writer Agent")
-processes.append(run_command(["python", "run_writer_agent.py"], "logs/writer.log", cores="0"))
+processes.append(run_command(["python", "run_writer_agent.py", "--config", "experiment_config.json"], "logs/writer.log", cores="0"))
 time.sleep(1)
 
 print("Launching Editor Agent")
-processes.append(run_command(["python", "run_editor_agent.py"], "logs/editor.log", cores="1"))
+processes.append(run_command(["python", "run_editor_agent.py", "--config", "experiment_config.json"], "logs/editor.log", cores="1"))
 time.sleep(1)
 
 print("Launching Group Chat Manager")
-processes.append(run_command(["python", "run_group_chat_manager.py"], "logs/manager.log", cores="2"))
+processes.append(run_command(["python", "run_group_chat_manager.py", "--config", "experiment_config.json"], "logs/manager.log", cores="2"))
 time.sleep(1)
 
 print("Launching UI Agent")
