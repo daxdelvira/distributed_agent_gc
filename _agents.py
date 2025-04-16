@@ -80,10 +80,13 @@ class BaseGroupChatAgent(RoutedAgent):
 
         needsState = True
         while needsState:
-            with TimeAndMemoryTracker(agent_label=self.id.type, function_name="state_report"):
-                state = await self._model_client.create(
-                    [self._state_report_message] + self._state_history + [new_message]
+            if self.experiment.latency:
+                with TimeAndMemoryTracker(agent_label=self.id.type, function_name="state_report"):
+                    state = await self._model_client.create(
+                        [self._state_report_message] + self._state_history + [new_message]
                     )
+            else:
+                state = await self._model_client.create([self._state_report_message] + self._state_history + [new_message])
             parsed = extract_valid_json(state.content)
             if parsed and validate_keys(parsed, set(self._state_vars.keys())):
                 needsState = False
