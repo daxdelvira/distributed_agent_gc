@@ -3,8 +3,12 @@ import time
 import os
 import argparse
 import json
+import socket
 from unified_state import UnifiedState
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE # Ensure this is defined in unified_state.py
+from multiprocessing import Process, Queue
+from state_server import state_server
+
 
 #-------------------------------
 # Argument parsing
@@ -18,16 +22,19 @@ def parse_args():
 args = parse_args()
 print(f"Running experiment: {args.experiment} with {args.state_vars} state variables")
 
-#---------------------------
-# Create experiment config
-#---------------------------
-experiment_config = {
-    "experiment": args.experiment,
-    "state_vars": args.state_vars,
-    "timestamp": time.strftime("%Y-%m-%d_%H-%M")
+# ------------------------------------------
+# Create unified state w/ith selected schema
+# ------------------------------------------
+
+state_map = {
+    1: ONE_VAR_STATE,
+    5: FIVE_VAR_STATE,
+    10: TEN_VAR_STATE,
+    50: FIFTY_VAR_STATE,
+    100: HUNDRED_VAR_STATE,
 }
-with open("experiment_config.json", "w") as f:
-    json.dump(experiment_config, f, indent=4)
+selected_state = state_map[args.state_vars]
+unified_state = UnifiedState(schema=selected_state)
 
 # Create log directory if not exists
 os.makedirs("logs", exist_ok=True)
@@ -61,7 +68,7 @@ processes.append(run_command(
     ],
     "logs/vllm.log",
     env=vllm_env,
-    cores="0-11"
+    cores="5-15"
 ))
 
 # Wait for vLLM API to be ready
@@ -83,20 +90,39 @@ if ready:
 else:
     print("Failed to detect vLLM API. Continuing anyway...")
 
+# ---------------------------
+# Find a free TCP port
+# ---------------------------
+def get_free_tcp_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
+    
+# ---------------------------
+# Launch HTTP-based State Server
+# ---------------------------
+print("Starting HTTP State Server...")
 
-# ------------------------------------------
-# Create unified state w/ith selected schema
-# ------------------------------------------
+server_port = get_free_tcp_port()
+server_addr = f"http://127.0.0.1:{server_port}"
 
-state_map = {
-    1: ONE_VAR_STATE,
-    5: FIVE_VAR_STATE,
-    10: TEN_VAR_STATE,
-    50: FIFTY_VAR_STATE,
-    100: HUNDRED_VAR_STATE,
+processes.append(run_command(
+    ["taskset", "-c", "4", "python", "state_server_http.py", str(server_port)],
+    "logs/state_server.log"
+))
+time.sleep(2)
+
+#---------------------------
+# Create experiment config
+#---------------------------
+experiment_config = {
+    "experiment": args.experiment,
+    "state_vars": selected_state,
+    "state_server_url": server_addr,
+    "timestamp": time.strftime("%Y-%m-%d_%H-%M")
 }
-selected_state = state_map[args.state_vars]
-unified_state = UnifiedState(schema=selected_state)
+with open("experiment_config.json", "w") as f:
+    json.dump(experiment_config, f, indent=4)
 
 # ---------------------------
 # Launch the Agents

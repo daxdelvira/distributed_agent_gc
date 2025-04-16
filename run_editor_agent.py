@@ -33,7 +33,7 @@ with open(args.config, "r") as f:
 state_vars = config_data["state_vars"]
 experiment = ExperimentContext(config_data["experiment"])
 
-async def main(config: AppConfig, state_vars: dict):
+async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext):
     set_all_log_levels(logging.ERROR)
     editor_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     editor_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]

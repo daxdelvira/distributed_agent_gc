@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import warnings
+import time
+import requests
 
 from _agents import BaseGroupChatAgent, export_metrics
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
@@ -31,8 +33,24 @@ with open(args.config, "r") as f:
 
 state_vars = config_data["state_vars"]
 experiment = ExperimentContext(config_data["experiment"])
+state_vars = config_data["state_vars"]
+experiment = ExperimentContext(config_data["experiment"])
+state_server_url = config_data["state_server_url"]
 
-async def main(config: AppConfig, state_vars: dict) -> None:
+def send_state_update(agent_id, state):
+    payload = {
+        "agent_id": agent_id,
+        "timestamp": time.time(),
+        "state": state
+    }
+
+    try:
+        response = requests.post(state_server_url, json=payload)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send state update: {e}")
+
+async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext):
     set_all_log_levels(logging.ERROR)
     writer_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     writer_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
@@ -81,4 +99,4 @@ async def main(config: AppConfig, state_vars: dict) -> None:
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
-    asyncio.run(main(load_config()))
+    asyncio.run(main(load_config(), state_vars, experiment))

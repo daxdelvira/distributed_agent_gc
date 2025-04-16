@@ -24,6 +24,7 @@ from state_updater import extract_valid_json, validate_keys, apply_state_update
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
 from unified_state import shared_unified_state
 from experiment_context import ExperimentContext
+from multiprocessing import Queue
 
 
 class BaseGroupChatAgent(RoutedAgent):
@@ -36,6 +37,7 @@ class BaseGroupChatAgent(RoutedAgent):
         model_client: ChatCompletionClient,
         state_vars: dict,
         experiment: ExperimentContext,
+        state_queue: Queue,
         system_message: str,
         ui_config: UIAgentConfig,
     ) -> None:
@@ -48,6 +50,7 @@ class BaseGroupChatAgent(RoutedAgent):
         self.console = Console()
         self._state_schema = state_vars
         self._state_json_str = json.dumps(state_vars, indent=4)
+        self._state_queue = state_queue
         self._experiment = experiment,
         self._state_report_message = SystemMessage(
             content="""
@@ -91,7 +94,7 @@ class BaseGroupChatAgent(RoutedAgent):
             if parsed and validate_keys(parsed, set(self._state_vars.keys())):
                 needsState = False
                 with TimeAndMemoryTracker(agent_label=self.id.type, function_name="apply_state_update"):
-                    apply_state_update(shared_unified_state, parsed)
+                    self._state_queue.put(parsed)
                     with tracer.start_as_current_span(f"state:{self.id.type}") as span:
                         span.set_attribute("agent_id", self.id.type)
 
