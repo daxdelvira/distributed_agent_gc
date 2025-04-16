@@ -18,6 +18,7 @@ from experiment_context import ExperimentContext
 import argparse
 import json
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
+from _tracking_utils import MemorySampler
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -39,6 +40,12 @@ async def main(config: AppConfig, state_vars: dict) -> None:
     Console().print(Markdown("Starting **`Writer Agent`**"))
 
     await writer_agent_runtime.start()
+    if experiment.per_agent_memory:
+        memory_sampler = MemorySampler(sample_interval=5.0)
+        sampling_task = asyncio.create_task(memory_sampler.start_sampling())
+    else:
+        memory_sampler = None
+        sampling_task = None
     writer_agent_type = await BaseGroupChatAgent.register(
         writer_agent_runtime,
         config.writer_agent.topic_type,
@@ -62,6 +69,12 @@ async def main(config: AppConfig, state_vars: dict) -> None:
     await writer_agent_runtime.stop_when_signal()
     now = datetime.now()
     timestamp = now.strftime( "%Y-%m-%d_%H-%M")
+
+    if memory_sampler:
+        await memory_sampler.stop_sampling()
+        await sampling_task
+        avg_rss = memory_sampler.average_rss()
+        memory_sampler.export_to_csv(filename=f"writer_memory_trace{timestamp}.csv", agent_label="writer_agent")
     save_metrics_to_csv_and_cdfs(f"writer_metrics_state_traced_1var_{timestamp}")
     export_metrics_to_csv(export_metrics, f"writer_metrics_state_traced_export_1var_{timestamp}.csv")
 

@@ -18,6 +18,8 @@ from rich.markdown import Markdown
 from agent_timeslices import save_metrics_to_csv_and_cdfs
 from _agents import export_metrics
 from datetime import datetime
+from experiment_context import ExperimentContext
+from _tracking_utils import MemorySampler
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -29,14 +31,24 @@ with open(args.config, "r") as f:
     config_data = json.load(f)
 
 state_vars = config_data["state_vars"]
+experiment = ExperimentContext(config_data["experiment"])
 
 async def main(config: AppConfig, state_vars: dict):
     set_all_log_levels(logging.ERROR)
     editor_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     editor_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
     await asyncio.sleep(4)
+
     Console().print(Markdown("Starting **`Editor Agent`**"))
+
     await editor_agent_runtime.start()
+    if experiment.per_agent_memory:
+        memory_sampler = MemorySampler(sample_interval=5.0)
+        sampling_task = asyncio.create_task(memory_sampler.start_sampling())
+    else:
+        memory_sampler = None
+        sampling_task = None
+
     model_client = OpenAIChatCompletionClient(**config.client_config)
     editor_agent_type = await BaseGroupChatAgent.register(
         editor_agent_runtime,
@@ -47,6 +59,7 @@ async def main(config: AppConfig, state_vars: dict):
             system_message=config.editor_agent.system_message,
             model_client=model_client,
             state_vars=state_vars,
+            experiment=experiment,
             ui_config=config.ui_agent,
         ),
     )
@@ -58,9 +71,17 @@ async def main(config: AppConfig, state_vars: dict):
     )
 
     await editor_agent_runtime.stop_when_signal()
-    await model_client.close()
     now = datetime.now()
     timestamp = now.strftime( "%Y-%m-%d_%H-%M")
+
+    if memory_sampler:
+        memory_sampler.stop()
+        await sampling_task
+        avg_rss = memory_sampler.average_rss()
+        memory_sampler.export_to_csv(filename=f"editor_memory_trace{timestamp}.csv", agent_label="editor_agent")
+
+    await model_client.close()
+    
     save_metrics_to_csv_and_cdfs(f"editor_metrics_state_traced_1var_{timestamp}")
     export_metrics_to_csv(export_metrics, f"editor_metrics_state_traced_export_1var_{timestamp}.csv")
 
@@ -68,4 +89,4 @@ async def main(config: AppConfig, state_vars: dict):
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
-    asyncio.run(main(load_config(), state_vars))
+    asyncio.run(main(load_config(), state_vars, experiment))
