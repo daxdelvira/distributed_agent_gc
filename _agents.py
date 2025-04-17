@@ -5,8 +5,6 @@ from typing import Awaitable, Callable, List, Dict
 from uuid import uuid4
 
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
-from _utils import export_metrics_to_csv
-from _tracking_utils import TimeAndMemoryTracker
 
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
 from autogen_core.models import (
@@ -93,7 +91,6 @@ class BaseGroupChatAgent(RoutedAgent):
                 needsState = False
                 with self._logger.track_comm_latency():
                     send_state_update(self.id.type, parsed, self._state_server_url)
-
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)
