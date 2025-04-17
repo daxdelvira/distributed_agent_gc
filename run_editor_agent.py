@@ -3,6 +3,8 @@ import logging
 import warnings
 import argparse
 import json
+import signal
+import sys
 
 from _agents import BaseGroupChatAgent
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
@@ -25,6 +27,10 @@ def parse_args():
     parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
     return parser.parse_args()   
 
+def handle_sigint(signum, frame):
+    print("[Editor Agent] Caught Ctrl+C — exporting metrics before exit...")
+    logger.export_all()
+    sys.exit(0)
 
 async def main(config: AppConfig, experiment: ExperimentContext, logger: AgentExperimentLogger, state_vars: dict, state_server_url: str):
     set_all_log_levels(logging.ERROR)
@@ -78,4 +84,5 @@ if __name__ == "__main__":
     state_server_url = config_data["state_server_url"]
     logger = AgentExperimentLogger(experiment, agent_label="editor_agent")
 
+    signal.signal(signal.SIGINT, handle_sigint)
     asyncio.run(main(load_config(), experiment, logger, state_vars, state_server_url))

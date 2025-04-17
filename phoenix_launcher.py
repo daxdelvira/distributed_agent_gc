@@ -4,6 +4,8 @@ import os
 import argparse
 import json
 import socket
+import signal
+import sys
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE # Ensure this is defined in unified_state.py
 
 
@@ -45,6 +47,17 @@ def run_command(command, log_file, env=None, cores=None):
     with open(log_file, "w") as out:
         proc = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, env=env)
     return proc
+
+def cleanup(signum, frame):
+    print("Caught Ctrl+C — terminating all subprocesses...")
+    for proc in processes:
+        try:
+            proc.terminate()
+        except Exception as e:
+            print(f"Error terminating process: {e}")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, cleanup)
 
 # ---------------------------
 # Launch vLLM (GPUs 0,1)
