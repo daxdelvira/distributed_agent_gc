@@ -12,13 +12,20 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_timeslices import save_metrics_to_csv_and_cdfs
+
+import argparse
+import json
+from experiment_context import ExperimentContext
+from agent_experiment_logger import AgentExperimentLogger
 
 
-set_all_log_levels(logging.ERROR)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
+    return parser.parse_args()
 
 
-async def main(config: AppConfig):
+async def main(config: AppConfig, experiment: ExperimentContext, logger: AgentExperimentLogger):
     set_all_log_levels(logging.ERROR)
     group_chat_manager_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
 
@@ -26,6 +33,7 @@ async def main(config: AppConfig):
     await asyncio.sleep(1)
     Console().print(Markdown("Starting **`Group Chat Manager`**"))
     await group_chat_manager_runtime.start()
+    await logger.track_memory()
     set_all_log_levels(logging.ERROR)
 
     model_client = OpenAIChatCompletionClient(**config.client_config)
@@ -68,8 +76,10 @@ async def main(config: AppConfig):
     )
 
     await group_chat_manager_runtime.stop_when_signal()
+    await logger.stop_memory()
+    logger.export_all()
     await model_client.close()
-    save_metrics_to_csv_and_cdfs("group_chat_manager_metrics_state_traced_10var")
+    
     Console().print("Manager left the chat!")
     
 
@@ -77,5 +87,13 @@ async def main(config: AppConfig):
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
-    asyncio.run(main(load_config()))
+    args = parse_args()
+
+    with open(args.config, "r") as f:
+        config_data = json.load(f)
+
+    experiment = ExperimentContext(config_data["experiment"])
+    logger = AgentExperimentLogger(experiment, agent_label="group_chat_manager")
+    asyncio.run(main(load_config(), experiment, logger))
+
 

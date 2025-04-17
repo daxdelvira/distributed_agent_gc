@@ -6,7 +6,7 @@ import json
 
 from _agents import BaseGroupChatAgent
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
-from _utils import get_serializers, load_config, set_all_log_levels, export_metrics_to_csv
+from _utils import get_serializers, load_config, set_all_log_levels
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
 from autogen_core import (
     TypeSubscription,
@@ -15,25 +15,29 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_timeslices import save_metrics_to_csv_and_cdfs
-from _agents import export_metrics
+
 from datetime import datetime
 from experiment_context import ExperimentContext
-from _tracking_utils import MemorySampler
+from agent_experiment_logger import AgentExperimentLogger
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
     return parser.parse_args()   
-args = parse_args()
 
-with open(args.config, "r") as f:
-    config_data = json.load(f)
 
-state_vars = config_data["state_vars"]
-experiment = ExperimentContext(config_data["experiment"])
+def load_state_vars(var_count):
+    state_map = {
+        1: ONE_VAR_STATE,
+        5: FIVE_VAR_STATE,
+        10: TEN_VAR_STATE,
+        50: FIFTY_VAR_STATE,
+        100: HUNDRED_VAR_STATE,
+    }
+    return state_map[var_count]
 
-async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext):
+
+async def main(config: AppConfig, experiment: ExperimentContext, logger: AgentExperimentLogger, state_vars: dict, state_server_url: str):
     set_all_log_levels(logging.ERROR)
     editor_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     editor_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
@@ -42,12 +46,7 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
     Console().print(Markdown("Starting **`Editor Agent`**"))
 
     await editor_agent_runtime.start()
-    if experiment.per_agent_memory:
-        memory_sampler = MemorySampler(sample_interval=5.0)
-        sampling_task = asyncio.create_task(memory_sampler.start_sampling())
-    else:
-        memory_sampler = None
-        sampling_task = None
+    await logger.track_memory()
 
     model_client = OpenAIChatCompletionClient(**config.client_config)
     editor_agent_type = await BaseGroupChatAgent.register(
@@ -60,6 +59,7 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
             model_client=model_client,
             state_vars=state_vars,
             experiment=experiment,
+            state_server_url=state_server_url,
             ui_config=config.ui_agent,
         ),
     )
@@ -71,22 +71,22 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
     )
 
     await editor_agent_runtime.stop_when_signal()
-    now = datetime.now()
-    timestamp = now.strftime( "%Y-%m-%d_%H-%M")
-
-    if memory_sampler:
-        memory_sampler.stop()
-        await sampling_task
-        avg_rss = memory_sampler.average_rss()
-        memory_sampler.export_to_csv(filename=f"editor_memory_trace{timestamp}.csv", agent_label="editor_agent")
-
+    await logger.stop_memory()
+    logger.export_all()
     await model_client.close()
-    
-    save_metrics_to_csv_and_cdfs(f"editor_metrics_state_traced_1var_{timestamp}")
-    export_metrics_to_csv(export_metrics, f"editor_metrics_state_traced_export_1var_{timestamp}.csv")
 
 
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
-    asyncio.run(main(load_config(), state_vars, experiment))
+    args = parse_args()
+
+    with open(args.config, "r") as f:
+        config_data = json.load(f)
+
+    experiment = ExperimentContext(config_data["experiment"])
+    state_vars = load_state_vars(config_data["state_vars"])
+    state_server_url = config_data["state_server_url"]
+    logger = AgentExperimentLogger(experiment, agent_label="editor_agent")
+
+    asyncio.run(main(load_config(), experiment, logger, state_vars, state_server_url))

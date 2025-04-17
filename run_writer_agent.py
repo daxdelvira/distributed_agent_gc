@@ -4,9 +4,9 @@ import warnings
 import time
 import requests
 
-from _agents import BaseGroupChatAgent, export_metrics
+from _agents import BaseGroupChatAgent
 from _types import AppConfig, GroupChatMessage, MessageChunk, RequestToSpeak
-from _utils import get_serializers, load_config, set_all_log_levels, export_metrics_to_csv
+from _utils import get_serializers, load_config, set_all_log_levels
 from autogen_core import (
     TypeSubscription,
 )
@@ -14,43 +14,20 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_timeslices import save_metrics_to_csv_and_cdfs
+
 from datetime import datetime
 from experiment_context import ExperimentContext
 import argparse
 import json
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
-from _tracking_utils import MemorySampler
+from agent_experiment_logger import AgentExperimentLogger
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
     return parser.parse_args()   
-args = parse_args()
 
-with open(args.config, "r") as f:
-    config_data = json.load(f)
-
-state_vars = config_data["state_vars"]
-experiment = ExperimentContext(config_data["experiment"])
-state_vars = config_data["state_vars"]
-experiment = ExperimentContext(config_data["experiment"])
-state_server_url = config_data["state_server_url"]
-
-def send_state_update(agent_id, state):
-    payload = {
-        "agent_id": agent_id,
-        "timestamp": time.time(),
-        "state": state
-    }
-
-    try:
-        response = requests.post(state_server_url, json=payload)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Failed to send state update: {e}")
-
-async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext):
+async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext, state_server_url: str):
     set_all_log_levels(logging.ERROR)
     writer_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     writer_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
@@ -58,12 +35,8 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
     Console().print(Markdown("Starting **`Writer Agent`**"))
 
     await writer_agent_runtime.start()
-    if experiment.per_agent_memory:
-        memory_sampler = MemorySampler(sample_interval=5.0)
-        sampling_task = asyncio.create_task(memory_sampler.start_sampling())
-    else:
-        memory_sampler = None
-        sampling_task = None
+    await logger.track_memory()
+
     writer_agent_type = await BaseGroupChatAgent.register(
         writer_agent_runtime,
         config.writer_agent.topic_type,
@@ -74,6 +47,7 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
             model_client=OpenAIChatCompletionClient(**config.client_config),
             state_vars=state_vars,
             experiment=experiment,
+            state_server_url=state_server_url,
             ui_config=config.ui_agent,
         ),
     )
@@ -88,15 +62,19 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
     now = datetime.now()
     timestamp = now.strftime( "%Y-%m-%d_%H-%M")
 
-    if memory_sampler:
-        await memory_sampler.stop_sampling()
-        await sampling_task
-        avg_rss = memory_sampler.average_rss()
-        memory_sampler.export_to_csv(filename=f"writer_memory_trace{timestamp}.csv", agent_label="writer_agent")
-    save_metrics_to_csv_and_cdfs(f"writer_metrics_state_traced_1var_{timestamp}")
-    export_metrics_to_csv(export_metrics, f"writer_metrics_state_traced_export_1var_{timestamp}.csv")
+    await logger.stop_memory()
+    logger.export_all()
 
 if __name__ == "__main__":
     set_all_log_levels(logging.ERROR)
     warnings.filterwarnings("ignore", category=UserWarning, message="Resolved model mismatch.*")
-    asyncio.run(main(load_config(), state_vars, experiment))
+    args = parse_args()
+
+    with open(args.config, "r") as f:
+        config_data = json.load(f)
+
+    state_vars = config_data["state_vars"]
+    experiment = ExperimentContext(config_data["experiment"])
+    logger = AgentExperimentLogger(experiment, agent_label="writer_agent")
+    state_server_url = config_data["state_server_url"]
+    asyncio.run(main(load_config(), state_vars, experiment, state_server_url))

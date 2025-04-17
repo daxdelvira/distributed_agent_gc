@@ -7,7 +7,7 @@ from uuid import uuid4
 from _types import GroupChatMessage, MessageChunk, RequestToSpeak, UIAgentConfig
 from _utils import export_metrics_to_csv
 from _tracking_utils import TimeAndMemoryTracker
-from _tracing_utils import tracer
+
 from autogen_core import DefaultTopicId, MessageContext, RoutedAgent, message_handler
 from autogen_core.models import (
     AssistantMessage,
@@ -19,12 +19,11 @@ from autogen_core.models import (
 from autogen_ext.runtimes.grpc import GrpcWorkerAgentRuntime
 from rich.console import Console
 from rich.markdown import Markdown
-from agent_timeslices import track_time_and_memory
-from state_updater import extract_valid_json, validate_keys, apply_state_update
+from state_updater import extract_valid_json, validate_keys, send_state_update
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
-from unified_state import shared_unified_state
+
 from experiment_context import ExperimentContext
-from multiprocessing import Queue
+from agent_experiment_logger import AgentExperimentLogger
 
 
 class BaseGroupChatAgent(RoutedAgent):
@@ -37,7 +36,7 @@ class BaseGroupChatAgent(RoutedAgent):
         model_client: ChatCompletionClient,
         state_vars: dict,
         experiment: ExperimentContext,
-        state_queue: Queue,
+        state_server_url: str,
         system_message: str,
         ui_config: UIAgentConfig,
     ) -> None:
@@ -50,8 +49,9 @@ class BaseGroupChatAgent(RoutedAgent):
         self.console = Console()
         self._state_schema = state_vars
         self._state_json_str = json.dumps(state_vars, indent=4)
-        self._state_queue = state_queue
-        self._experiment = experiment,
+        self._experiment = experiment
+        self._logger = AgentExperimentLogger(self._experiment, agent_label=self.id.type)  # will update below
+        self._state_server_url = state_server_url
         self._state_report_message = SystemMessage(
             content="""
             Please provide updates to the state based on your last message and the previous state, if any.
@@ -60,6 +60,7 @@ class BaseGroupChatAgent(RoutedAgent):
             """
         )
         self._state_history: List[LLMMessage] = []
+
 
     @message_handler
     async def handle_message(self, message: GroupChatMessage, ctx: MessageContext) -> None:
@@ -71,7 +72,6 @@ class BaseGroupChatAgent(RoutedAgent):
         )
 
     @message_handler
-    @track_time_and_memory(get_label=lambda self: self.id.type)
     async def handle_request_to_speak(self, message: RequestToSpeak, ctx: MessageContext) -> None:
         self._chat_history.append(
             UserMessage(content=f"Transferred to {self.id.type}, adopt the persona immediately.", source="system")
@@ -83,29 +83,16 @@ class BaseGroupChatAgent(RoutedAgent):
 
         needsState = True
         while needsState:
-            if self.experiment.latency:
-                with TimeAndMemoryTracker(agent_label=self.id.type, function_name="state_report"):
-                    state = await self._model_client.create(
-                        [self._state_report_message] + self._state_history + [new_message]
+            with self._logger.track_llm("state_report"):
+                state = await self._model_client.create(
+                    [self._state_report_message] + self._state_history + [new_message]
                     )
-            else:
-                state = await self._model_client.create([self._state_report_message] + self._state_history + [new_message])
-            parsed = extract_valid_json(state.content)
-            if parsed and validate_keys(parsed, set(self._state_vars.keys())):
-                needsState = False
-                with TimeAndMemoryTracker(agent_label=self.id.type, function_name="apply_state_update"):
-                    self._state_queue.put(parsed)
-                    with tracer.start_as_current_span(f"state:{self.id.type}") as span:
-                        span.set_attribute("agent_id", self.id.type)
 
-                        # Each key-value in state becomes a span attribute
-                        for k, v in parsed.items():
-                            attr_key = f"state.{k}"
-                            try:
-                                span.set_attribute(attr_key, v)
-                            except Exception:
-                                span.set_attribute(attr_key, str(v))
-                  # type: ignore[call-arg]
+            parsed = extract_valid_json(state.content)
+            if parsed and validate_keys(parsed, self._state_schema):
+                needsState = False
+                with self._logger.track_comm_latency():
+                    send_state_update(self.id.type, parsed, self._state_server_url)
 
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
@@ -144,7 +131,6 @@ class GroupChatManager(RoutedAgent):
         self._ui_config = ui_config
 
     @message_handler
-    @track_time_and_memory(get_label=lambda self: self.id.type)
     async def handle_message(self, message: GroupChatMessage, ctx: MessageContext) -> None:
         assert isinstance(message.body, UserMessage)
 

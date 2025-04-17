@@ -4,9 +4,7 @@ import os
 import argparse
 import json
 import socket
-from unified_state import UnifiedState
 from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE # Ensure this is defined in unified_state.py
-from multiprocessing import Process, Queue
 from state_server import state_server
 
 
@@ -34,7 +32,6 @@ state_map = {
     100: HUNDRED_VAR_STATE,
 }
 selected_state = state_map[args.state_vars]
-unified_state = UnifiedState(schema=selected_state)
 
 # Create log directory if not exists
 os.makedirs("logs", exist_ok=True)
@@ -107,7 +104,7 @@ server_port = get_free_tcp_port()
 server_addr = f"http://127.0.0.1:{server_port}"
 
 processes.append(run_command(
-    ["taskset", "-c", "4", "python", "state_server_http.py", str(server_port)],
+    ["taskset", "-c", "4", "python", "state_server.py", str(server_port)],
     "logs/state_server.log"
 ))
 time.sleep(2)
