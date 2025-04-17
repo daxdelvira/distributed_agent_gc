@@ -11,8 +11,8 @@ from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, F
 # Argument parsing
 #-------------------------------
 def parse_args():
-    parser = argparse.ArgumentParse()
-    parser.add_argument("--state-vars", type=str, default="1", choices=[1, 5, 10, 50, 100], help="Number of state variables to use (1, 5, 10, 50, 100)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--state-vars", type=int, default=1, choices=[1, 5, 10, 50, 100], help="Number of state variables to use (1, 5, 10, 50, 100)")
     parser.add_argument("--experiment", type=str, default="none", choices=["llm-latency", "per-agent-memory", "central-log-memory", "state-update-comms"], help="Experiment to run")
     return parser.parse_args()
 
