@@ -6,6 +6,9 @@ import atexit
 import csv
 import threading
 from datetime import datetime
+from state_server_experiment_logger import StateServerLogger
+
+logger = StateServerLogger()
 
 app = Flask(__name__)
 state_lock = threading.Lock()
@@ -13,22 +16,6 @@ state_history = []
 
 # Timestamped filenames
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-LATENCY_CSV = f"logs/server_latency_{timestamp}.csv"
-MEMORY_CSV = f"logs/server_memory_{timestamp}.csv"
-
-# Create CSV files
-latency_log = open(LATENCY_CSV, "w", newline="")
-latency_writer = csv.writer(latency_log)
-latency_writer.writerow(["timestamp", "latency_ms"])
-
-memory_log = open(MEMORY_CSV, "w", newline="")
-memory_writer = csv.writer(memory_log)
-memory_writer.writerow(["timestamp", "memory_mb"])
-
-# Memory utility
-def get_memory_mb():
-    proc = psutil.Process(os.getpid())
-    return proc.memory_info().rss / (1024 * 1024)
 
 @app.route('/update_state', methods=['POST'])
 def update_state():
@@ -41,17 +28,7 @@ def update_state():
     with state_lock:
         state_history.append(data)
 
-    latency_ms = (time.perf_counter() - start_time) * 1000
-    current_time = time.time()
-    memory_mb = get_memory_mb()
-
-    # Log latency and memory
-    latency_writer.writerow([current_time, f"{latency_ms:.2f}"])
-    memory_writer.writerow([current_time, f"{memory_mb:.2f}"])
-
-    # Flush files to make them viewable during runtime
-    latency_log.flush()
-    memory_log.flush()
+    logger.log_request_metrics(start_time)
 
     return jsonify({"status": "ok"}), 200
 
@@ -68,8 +45,6 @@ def get_state():
 # Cleanup function to run on exit
 def cleanup():
     print("Cleaning up server state...")
-    latency_log.close()
-    memory_log.close()
     state_history.clear()
 
 atexit.register(cleanup)
