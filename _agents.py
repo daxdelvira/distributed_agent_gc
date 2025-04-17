@@ -54,8 +54,7 @@ class BaseGroupChatAgent(RoutedAgent):
             content="""
             Please provide updates to the state based on your last message and the previous state, if any.
             Use the following JSON format, replacing the 'None' value with the actual value.
-            f"{self._state_json_str}"
-            """
+            """ + self._state_json_str
         )
         self._state_history: List[LLMMessage] = []
 
