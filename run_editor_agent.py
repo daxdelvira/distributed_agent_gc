@@ -26,17 +26,6 @@ def parse_args():
     return parser.parse_args()   
 
 
-def load_state_vars(var_count):
-    state_map = {
-        1: ONE_VAR_STATE,
-        5: FIVE_VAR_STATE,
-        10: TEN_VAR_STATE,
-        50: FIFTY_VAR_STATE,
-        100: HUNDRED_VAR_STATE,
-    }
-    return state_map[var_count]
-
-
 async def main(config: AppConfig, experiment: ExperimentContext, logger: AgentExperimentLogger, state_vars: dict, state_server_url: str):
     set_all_log_levels(logging.ERROR)
     editor_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
@@ -85,7 +74,7 @@ if __name__ == "__main__":
         config_data = json.load(f)
 
     experiment = ExperimentContext(config_data["experiment"])
-    state_vars = load_state_vars(config_data["state_vars"])
+    state_vars = config_data["state_vars"]
     state_server_url = config_data["state_server_url"]
     logger = AgentExperimentLogger(experiment, agent_label="editor_agent")
 
