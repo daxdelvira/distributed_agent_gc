@@ -100,7 +100,7 @@ def get_free_tcp_port():
 print("Starting HTTP State Server...")
 
 server_port = get_free_tcp_port()
-server_addr = f"http://127.0.0.1:{server_port}"
+server_addr = f"http://0.0.0.0:{server_port}"
 
 processes.append(run_command(
     ["taskset", "-c", "4", "python", "state_server.py", str(server_port)],
