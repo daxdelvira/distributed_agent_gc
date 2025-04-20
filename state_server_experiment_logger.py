@@ -1,6 +1,6 @@
 import os
 import time
-import csv
+import subprocess
 import psutil
 import atexit
 from datetime import datetime
@@ -42,6 +42,14 @@ class StateServerLogger:
             f.write("label,timestamp,memory_mb\n")
             for ts, mem in self.memory_samples:
                 f.write(f"{self.label},{ts},{mem:.2f}\n")
+            
+        self._maybe_generate_plots()
+
+    def _maybe_generate_plots(self):
+        try:
+            subprocess.run(["python", "generate_experiment_plots.py"], check=True)
+        except Exception as e:
+            print(f"[{self.agent_label}] Plot generation failed: {e}")
 
     def _get_memory_mb(self) -> float:
         proc = psutil.Process(os.getpid())

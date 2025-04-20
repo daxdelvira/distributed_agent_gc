@@ -42,6 +42,7 @@ class AgentExperimentLogger:
 
     async def track_memory(self):
         if self.experiment.per_agent_memory:
+            print("[AgentExperimentLogger] Starting memory sampling...")
             self.memory_sampler = SingleAgentMemorySampler()
             await self.memory_sampler.__aenter__()
         return self
@@ -52,6 +53,7 @@ class AgentExperimentLogger:
 
     def export_all(self):
         os.makedirs("logs", exist_ok=True)
+        print(f"Exporting memory? {self.memory_sampler is not None}")
 
         # Export LLM metrics
         if self.experiment.llm_latency:

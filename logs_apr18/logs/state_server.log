@@ -1,0 +1,17 @@
+ * Serving Flask app 'state_server'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:40475
+Press CTRL+C to quit
+127.0.0.1 - - [18/Apr/2025 14:22:42] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:22:46] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:22:48] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:22:53] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:22:55] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:23:00] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:23:03] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:26:18] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:26:23] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:26:30] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:26:33] "POST /update_state HTTP/1.1" 200 -
+127.0.0.1 - - [18/Apr/2025 14:26:41] "POST /update_state HTTP/1.1" 200 -

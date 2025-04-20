@@ -80,7 +80,9 @@ if __name__ == "__main__":
         config_data = json.load(f)
 
     experiment = ExperimentContext(config_data["experiment"])
+    print(f'Experiment is {experiment}')
     state_vars = config_data["state_vars"]
+    print(f'State vars are {state_vars}')
     state_server_url = config_data["state_server_url"]
     logger = AgentExperimentLogger(experiment, agent_label="editor_agent")
 

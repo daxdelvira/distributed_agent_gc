@@ -1,0 +1,4 @@
+agent,timestamp,latency_ms
+Writer,1745001474.3464942,5.03
+Writer,1745001482.930399,2.63
+Writer,1745001491.7141645,2.73
