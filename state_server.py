@@ -4,11 +4,24 @@ import os
 import psutil
 import atexit
 import csv
+import sys
+import signal
 import threading
 from datetime import datetime
 from state_server_experiment_logger import StateServerLogger
 
 logger = StateServerLogger()
+
+def handle_shutdown_signal(signum, frame):
+    print(f"[State Server] Caught signal {signum}. Exporting metrics and cleaning up.")
+    logger.export_all()
+    cleanup()
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, handle_shutdown_signal)   # Ctrl+C
+signal.signal(signal.SIGTERM, handle_shutdown_signal)  # kill or termination
+
 
 app = Flask(__name__)
 state_lock = threading.Lock()
