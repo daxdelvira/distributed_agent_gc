@@ -80,8 +80,10 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history.append(new_message)
 
         needsState = True
+        retrieval_url = self._state_server_url+"/get_state"
+        print(f"Retrieving state from {retrieval_url}")
         with self._logger.track_state_retrieval():
-            prev_state = requests.get(self._state_server_url+"/get_state").json()
+            prev_state = requests.get(retrieval_url).json()
         prev_state_message = AssistantMessage(content=json.dumps(prev_state), source=self.id.type)
         while needsState:
             with self._logger.track_llm("state_report"):
@@ -93,7 +95,7 @@ class BaseGroupChatAgent(RoutedAgent):
             if parsed and validate_keys(parsed, self._state_schema):
                 needsState = False
                 with self._logger.track_comm_latency():
-                    send_state_update(self.id.type, parsed, self._state_server_url)
+                    send_state_update(self.id.type, parsed, self._state_server_url+"/update_state")
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)

@@ -15,7 +15,7 @@ from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, F
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--state-vars", type=int, default=1, choices=[1, 5, 10, 50, 100], help="Number of state variables to use (1, 5, 10, 50, 100)")
-    parser.add_argument("--experiment", type=str, default="none", choices=["llm-latency", "per-agent-memory", "central-log-memory", "state-update-comms"], help="Experiment to run")
+    parser.add_argument("--experiment", type=str, default="none", choices=["llm-latency", "per-agent-memory", "central-log-memory", "state-update-comms", "state-retrieval"], help="Experiment to run")
     return parser.parse_args()
 
 args = parse_args()
@@ -113,7 +113,7 @@ def get_free_tcp_port():
 print("Starting HTTP State Server...")
 
 server_port = get_free_tcp_port()
-server_addr = f"http://127.0.0.1:{server_port}/update_state"
+server_addr = f"http://127.0.0.1:{server_port}"
 
 processes.append(run_command(
     ["taskset", "-c", "4", "python", "state_server.py", str(server_port)],
