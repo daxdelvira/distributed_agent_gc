@@ -1,6 +1,7 @@
 import asyncio
 import random
 import json
+import requests
 from typing import Awaitable, Callable, List, Dict
 from uuid import uuid4
 
@@ -79,10 +80,13 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history.append(new_message)
 
         needsState = True
+        with self._logger.track_state_retrieval():
+            prev_state = requests.get(self._state_server_url+"/get_state").json()
+        prev_state_message = AssistantMessage(content=json.dumps(prev_state), source=self.id.type)
         while needsState:
             with self._logger.track_llm("state_report"):
                 state = await self._model_client.create(
-                    [self._state_report_message] + self._state_history + [new_message]
+                    [self._state_report_message] + [prev_state_message] + [new_message]
                     )
 
             parsed = extract_valid_json(state.content)

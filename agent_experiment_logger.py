@@ -9,7 +9,7 @@ from typing import Optional, Dict, List, Tuple
 import psutil
 import requests
 
-from _tracking_utils import LLMTimeTracker, StateCommLatencyTracker, SingleAgentMemorySampler
+from _tracking_utils import LLMTimeTracker, StateCommLatencyTracker, StateRetrievalLatencyTracker, SingleAgentMemorySampler
 from experiment_context import ExperimentContext
 
 class AgentExperimentLogger:
@@ -22,11 +22,13 @@ class AgentExperimentLogger:
         self.llm_metrics: List[Dict] = []
         self.state_update_latencies: List[Tuple[float, float]] = []
         self.memory_sampler: Optional[SingleAgentMemorySampler] = None
+        self.state_retrieval_latencies: List[Dict] = []
 
         # Log file paths
         self.llm_csv = f"logs/{self.agent_label}_llm_metrics_{self.timestamp}.csv"
         self.comm_csv = f"logs/{self.agent_label}_comm_latency_{self.timestamp}.csv"
         self.memory_csv = f"logs/{self.agent_label}_memory_{self.timestamp}.csv"
+        self.state_retrieval_csv = f"logs/{self.agent_label}_state_retrieval_latency_{self.timestamp}.csv"
 
         atexit.register(self.export_all)
 
@@ -39,6 +41,10 @@ class AgentExperimentLogger:
         if self.experiment.state_update_comms:
             return StateCommLatencyTracker(self.state_update_latencies, self.agent_label)
         return _null_context()
+    
+    def track_state_retrieval(self):
+        if self.experiment.state_retrieval:
+            return StateRetrievalLatencyTracker(self.state_retrieval_latencies, self.agent_label)
 
     async def track_memory(self):
         if self.experiment.per_agent_memory:

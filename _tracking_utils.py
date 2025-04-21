@@ -48,6 +48,23 @@ class StateCommLatencyTracker:
         latency_ms = (end - self.start) * 1000
         self.round_trip_latencies_list.append((time.time(), latency_ms))
 
+class StateRetrievalLatencyTracker:
+    def __init__(self, latency_log: List[Dict], agent_label: str):
+        self.latency_log = latency_log
+        self.agent_label = agent_label
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        end = time.perf_counter()
+        latency_ms = (end - self.start) * 1000
+        self.latency_log.append({
+            "agent": self.agent_label,
+            "timestamp": time.time(),
+            "latency_ms": latency_ms
+        })
 
 class SingleAgentMemorySampler:
     def __init__(self, sample_interval: float = 5.0):
@@ -73,6 +90,7 @@ class SingleAgentMemorySampler:
             rss = self.process.memory_info().rss / (1024 * 1024)  # MB
             timestamp = time.time()
             self.samples.append((timestamp, rss))
+            print(f"[Sampler] Memory at {rss:.2f} MB")
             await asyncio.sleep(self.sample_interval)
 
     def export_to_csv(self, filename="memory_trace.csv", agent_label="unknown"):
