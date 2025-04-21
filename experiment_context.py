@@ -5,3 +5,4 @@ class ExperimentContext:
         self.per_agent_memory = mode == "per-agent-memory"
         self.central_log_memory = mode == "central-log-memory"
         self.state_update_comms = mode == "state-update-comms"
+        self.state_retrieval = mode == "state-retrieval"

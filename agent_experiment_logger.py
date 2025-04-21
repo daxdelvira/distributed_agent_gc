@@ -79,6 +79,13 @@ class AgentExperimentLogger:
         if self.experiment.per_agent_memory and self.memory_sampler:
             self.memory_sampler.export_to_csv(filename=self.memory_csv, agent_label=self.agent_label)
 
+        # Export state retrieval latencies
+        if self.experiment.state_retrieval:
+            with open(self.state_retrieval_csv, "w") as f:
+                f.write("agent,timestamp,latency_ms\n")
+                for row in self.state_retrieval_latencies:
+                    f.write(f"{row['agent']},{row['timestamp']},{row['latency_ms']:.2f}\n")
+
 
 class _null_context:
     def __enter__(self): pass
