@@ -74,7 +74,8 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history.append(
             UserMessage(content=f"Transferred to {self.id.type}, adopt the persona immediately.", source="system")
         )
-        completion = await self._model_client.create([self._system_message] + self._chat_history)
+        with self._logger.track_llm("chat_completion"):
+            completion = await self._model_client.create([self._system_message] + self._chat_history)
         assert isinstance(completion.content, str)
         new_message = AssistantMessage(content=completion.content, source=self.id.type)
         self._chat_history.append(new_message)
@@ -96,6 +97,11 @@ class BaseGroupChatAgent(RoutedAgent):
                 needsState = False
                 with self._logger.track_comm_latency():
                     send_state_update(self.id.type, parsed, self._state_server_url+"/update_state")
+
+        with self._logger.trackllm("piggybacked_requirements"):
+            new_completion = await self._model_client.create(
+                [self._system_message] + [self._state_report_message] + [prev_state_message] + [new_message]
+            )
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)
