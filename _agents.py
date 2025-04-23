@@ -100,7 +100,7 @@ class BaseGroupChatAgent(RoutedAgent):
 
         with self._logger.trackllm("piggybacked_requirements"):
             new_completion = await self._model_client.create(
-                [self._system_message] + [self._state_report_message] + [prev_state_message] + [new_message]
+                [self._system_message + "Please complete your sentence and then print STATE----- and report the state on the next line"] + [self._state_report_message] + [prev_state_message] + [new_message]
             )
 
         new_state = AssistantMessage(content=state.content, source=self.id.type)
