@@ -54,7 +54,7 @@ class BaseGroupChatAgent(RoutedAgent):
         self._state_report_message = SystemMessage(
             content="""
             Please provide updates to the state based on your last message and the previous state, if any.
-            Use the following JSON format, replacing the 'None' value with the actual value.
+            Use the following JSON format to report state, replacing the 'None' value with the actual value.
             """ + self._state_json_str
         )
         self._state_history: List[LLMMessage] = []
@@ -80,6 +80,7 @@ class BaseGroupChatAgent(RoutedAgent):
         new_message = AssistantMessage(content=completion.content, source=self.id.type)
         self._chat_history.append(new_message)
 
+        print(self._state_schema)
         needsState = True
         retrieval_url = self._state_server_url+"/get_state"
         print(f"Retrieving state from {retrieval_url}")
@@ -92,17 +93,18 @@ class BaseGroupChatAgent(RoutedAgent):
                     [self._state_report_message] + [prev_state_message] + [new_message]
                     )
 
-            parsed = extract_valid_json(state.content)
-            if parsed and validate_keys(parsed, self._state_schema):
-                needsState = False
-                with self._logger.track_comm_latency():
-                    send_state_update(self.id.type, parsed, self._state_server_url+"/update_state")
+           # parsed = extract_valid_json(state.content)
+           # if parsed and validate_keys(parsed, self._state_schema):
+            needsState = False
+            with self._logger.track_comm_latency():
+                #remember to switch back to parsed eventually
+                send_state_update(self.id.type, state.content, self._state_server_url+"/update_state")
 
-        with self._logger.trackllm("piggybacked_requirements"):
+        with self._logger.track_llm("piggybacked_requirements"):
             new_completion = await self._model_client.create(
-                [self._system_message + "Please complete your sentence and then print STATE----- and report the state on the next line"] + [self._state_report_message] + [prev_state_message] + [new_message]
-            )
-
+                    [self._system_message] +[SystemMessage(content="Please complete your writer or editor sentence here and then below the sentence print STATE----- and report the state on the next line according to the format in the following instructions:")] + [self._state_report_message] + [prev_state_message] + [new_message] + [SystemMessage(content="Please remember to print both your contribution to the conversation AND the state message in your response")]
+                )
+        print("Piggyback completion content:", new_completion.content)
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)
 

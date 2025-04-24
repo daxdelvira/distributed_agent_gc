@@ -6,12 +6,11 @@ import json
 import socket
 import signal
 import sys
-from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE # Ensure this is defined in unified_state.py
+from unified_state_config import ONE_VAR_STATE, FIVE_VAR_STATE, TEN_VAR_STATE, FIFTY_VAR_STATE, HUNDRED_VAR_STATE
 
-
-#-------------------------------
+# -------------------------------
 # Argument parsing
-#-------------------------------
+# -------------------------------
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--state-vars", type=int, default=1, choices=[1, 5, 10, 50, 100], help="Number of state variables to use (1, 5, 10, 50, 100)")
@@ -22,9 +21,8 @@ args = parse_args()
 print(f"Running experiment: {args.experiment} with {args.state_vars} state variables")
 
 # ------------------------------------------
-# Create unified state w/ith selected schema
+# Create unified state with selected schema
 # ------------------------------------------
-
 state_map = {
     1: ONE_VAR_STATE,
     5: FIVE_VAR_STATE,
@@ -34,7 +32,6 @@ state_map = {
 }
 selected_state = state_map[args.state_vars]
 
-# Create log directory if not exists
 os.makedirs("logs", exist_ok=True)
 
 # Track all launched processes
@@ -60,32 +57,9 @@ def cleanup(signum, frame):
 signal.signal(signal.SIGINT, cleanup)
 
 # ---------------------------
-# Launch vLLM (GPUs 0,1)
+# Check if vLLM is running
 # ---------------------------
-
-print("Starting Qwen-14B-Instruct on vLLM with GPUs 0,1...")
-
-vllm_env = os.environ.copy()
-vllm_env["CUDA_VISIBLE_DEVICES"] = "0,1"
-
-processes.append(run_command(
-    [
-        "python", "-m", "vllm.entrypoints.openai.api_server",
-        "--model", "Qwen/Qwen2.5-14B-Instruct",
-        "--tensor-parallel-size", "2",
-        "--dtype", "half"
-    ],
-    "logs/vllm.log",
-    env=vllm_env,
-    cores="5-15"
-))
-
-# Wait for vLLM API to be ready
-print("Waiting for vLLM to become available...")
-time.sleep(5)
-if processes[0].poll() is not None:
-    print("❌ vLLM process exited early. Check logs/vllm.log")
-    sys.exit(1)
+print("Checking if vLLM is running...")
 ready = False
 for i in range(30):
     try:
@@ -96,12 +70,12 @@ for i in range(30):
     except subprocess.CalledProcessError:
         pass
     print("  ...still waiting for vLLM...")
-    time.sleep(25)
+    time.sleep(3)
 
 if ready:
-    print("Qwen LLM API is online!")
+    print("✅ Qwen LLM API is online!")
 else:
-    print("Failed to detect vLLM API. Continuing anyway...")
+    print("⚠️  Failed to detect vLLM API. You may need to run: python vllm_launcher.py")
 
 # ---------------------------
 # Find a free TCP port
@@ -115,19 +89,18 @@ def get_free_tcp_port():
 # Launch HTTP-based State Server
 # ---------------------------
 print("Starting HTTP State Server...")
-
 server_port = get_free_tcp_port()
 server_addr = f"http://127.0.0.1:{server_port}"
 
 processes.append(run_command(
     ["taskset", "-c", "4", "python", "state_server.py", str(server_port)],
-    "logs/state_server.log"
+    "logs/state_server_2.log"
 ))
 time.sleep(2)
 
-#---------------------------
+# ---------------------------
 # Create experiment config
-#---------------------------
+# ---------------------------
 experiment_config = {
     "experiment": args.experiment,
     "state_vars": selected_state,
@@ -140,25 +113,24 @@ with open("experiment_config.json", "w") as f:
 # ---------------------------
 # Launch the Agents
 # ---------------------------
-
 print("Launching Host Runtime")
-processes.append(run_command(["python", "run_host.py", "--config"], "logs/host.log"))
+processes.append(run_command(["python", "run_host.py", "--config"], "logs/host2.log"))
 time.sleep(2)
 
 print("Launching Writer Agent")
-processes.append(run_command(["python", "run_writer_agent.py", "--config", "experiment_config.json"], "logs/writer.log", cores="0"))
+processes.append(run_command(["python", "run_writer_agent.py", "--config", "experiment_config.json"], "logs/writer2.log", cores="0"))
 time.sleep(1)
 
 print("Launching Editor Agent")
-processes.append(run_command(["python", "run_editor_agent.py", "--config", "experiment_config.json"], "logs/editor.log", cores="1"))
+processes.append(run_command(["python", "run_editor_agent.py", "--config", "experiment_config.json"], "logs/editor2.log", cores="1"))
 time.sleep(1)
 
 print("Launching Group Chat Manager")
-processes.append(run_command(["python", "run_group_chat_manager.py", "--config", "experiment_config.json"], "logs/manager.log", cores="2"))
+processes.append(run_command(["python", "run_group_chat_manager.py", "--config", "experiment_config.json"], "logs/manager2.log", cores="2"))
 time.sleep(1)
 
 print("Launching UI Agent")
-processes.append(run_command(["python", "run_ui.py"], "logs/ui.log", cores="3"))
+processes.append(run_command(["python", "run_ui.py"], "logs/ui2.log", cores="3"))
 time.sleep(1)
 
 print("All agents launched. Waiting for them to finish...")
@@ -168,3 +140,4 @@ for proc in processes:
     proc.wait()
 
 print("All agents have exited.")
+

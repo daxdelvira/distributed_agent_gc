@@ -41,10 +41,11 @@ class AgentExperimentLogger:
         if self.experiment.state_update_comms:
             return StateCommLatencyTracker(self.state_update_latencies, self.agent_label)
         return _null_context()
-    
+
     def track_state_retrieval(self):
         if self.experiment.state_retrieval:
             return StateRetrievalLatencyTracker(self.state_retrieval_latencies, self.agent_label)
+        return _null_context()
 
     async def track_memory(self):
         if self.experiment.per_agent_memory:

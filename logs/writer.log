@@ -1,16 +1,23 @@
-Starting Writer Agent                                                                                                                                                                                                  
-✅ Updated state with: {'writer_topic': 'Halloween-themed storytelling with a gingerbread house that comes to life at night, targeting an audience interested in magical and eerie tales.'}
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Writer: On Halloween night, the gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight as it whispered sweet, eerie invitations to the passersby.                           
-✅ Updated state with: {'writer_topic': "Halloween-themed storytelling with a magical and eerie twist, where a gingerbread house in the old Smith's yard comes to life and invites ghosts and goblins with haunting tales."}
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Writer: On Halloween night, the gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight, and it began to whisper sweet, eerie invitations to the ghosts and goblins who      
-passed by, offering them a taste of its sugary delights in exchange for haunting tales from beyond the grave.                                                                                                          
-✅ Updated state with: {'writer_topic': "Halloween-themed storytelling with a magical and eerie twist, where a gingerbread house in the old Smith's yard comes to life and invites ghosts and goblins with haunting tales."}
-───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Writer: On Halloween night, the gingerbread house in the old Smith's yard glowed with an otherworldly light, its candy bricks shimmering in the moonlight. The house, now a mystical entity, whispered sweet, eerie    
-invitations to the ghosts and goblins that passed by, offering them enchanted treats in exchange for haunting tales from beyond the grave, each story weaving deeper into the gingerbread's ancient, magical essence.  
-[agent_metrics] Saved CSV for Writer: writer_metrics_state_traced_1var_pt2/metrics_Writer.csv
-[agent_metrics] Saved CDF plot: writer_metrics_state_traced_1var_pt2/cdf_Writer_duration.png
-[agent_metrics] Saved CDF plot: writer_metrics_state_traced_1var_pt2/cdf_Writer_memory.png
-Exported 3 rows to writer_metrics_state_traced_export_1var_pt2.csv
+Starting Writer Agent                                                                                                                                                 
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight as it whispered sweet, eerie        
+invitations to the passersby.                                                                                                                                         
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the enchanted gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight, inviting                 
+trick-or-treaters inside with whispers of sugar and spice, where it shared eerie tales and bestowed crumbs of good luck.                                              
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the enchanted gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight, inviting                 
+trick-or-treaters inside with whispers of sugar and spice, where it shared spine-chilling tales and bestowed crumbs of good luck laced with an otherworldly allure.   
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the enchanted gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight, inviting                 
+trick-or-treaters inside with whispers of sugar and spice. Inside, it shared spine-chilling tales and bestowed crumbs of good luck laced with an otherworldly allure, 
+granting each visitor a peculiar glimpse into their future before dawn.                                                                                               
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the enchanted gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight. It invited               
+trick-or-treaters inside with whispers of sugar and spice, where it shared spine-chilling tales and bestowed crumbs of good luck laced with an otherworldly allure,   
+granting each visitor a peculiar glimpse into their future before dawn.                                                                                               
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Writer: On Halloween night, the enchanted gingerbread house in the old Smith's yard came to life, its candy bricks glowing in the moonlight. It invited               
+trick-or-treaters inside with whispers of sugar and spice, where it shared spine-chilling tales and bestowed crumbs of good luck laced with an otherworldly allure. As
+dawn approached, each visitor left the gingerbread house, carrying with them not just sweet treats but the eerie memories of their future glimpses, never quite the   
+same as when they entered.                                                                                                                                            
