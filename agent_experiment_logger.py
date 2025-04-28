@@ -9,7 +9,7 @@ from typing import Optional, Dict, List, Tuple
 import psutil
 import requests
 
-from _tracking_utils import LLMTimeTracker, StateCommLatencyTracker, StateRetrievalLatencyTracker, SingleAgentMemorySampler
+from _tracking_utils import LLMTimeTracker, TokenCostTracker, LLMCostsTracker, StateCommLatencyTracker, StateRetrievalLatencyTracker, SingleAgentMemorySampler
 from experiment_context import ExperimentContext
 
 class AgentExperimentLogger:
@@ -23,18 +23,26 @@ class AgentExperimentLogger:
         self.state_update_latencies: List[Tuple[float, float]] = []
         self.memory_sampler: Optional[SingleAgentMemorySampler] = None
         self.state_retrieval_latencies: List[Dict] = []
+        self.input_token_costs: List[Dict] = []
+        self.output_token_costs: List[Dict] = []
+
 
         # Log file paths
         self.llm_csv = f"logs/{self.agent_label}_llm_metrics_{self.timestamp}.csv"
         self.comm_csv = f"logs/{self.agent_label}_comm_latency_{self.timestamp}.csv"
         self.memory_csv = f"logs/{self.agent_label}_memory_{self.timestamp}.csv"
         self.state_retrieval_csv = f"logs/{self.agent_label}_state_retrieval_latency_{self.timestamp}.csv"
+        self.input_tokens_csv = f"logs/{self.agent_label}_input_token_costs_{self.timestamp}.csv"
+        self.output_tokens_csv = f"logs/{self.agent_label}_output_token_costs_{self.timestamp}.csv"
+
 
         atexit.register(self.export_all)
 
     def track_llm(self, function_name: str):
         if self.experiment.llm_latency:
-            return LLMTimeTracker(self.llm_metrics, self.agent_label, function_name)
+            llm_tracker = LLMTimeTracker(self.llm_metrics, self.agent_label, function_name)
+            token_tracker = TokenCostTracker(self.input_token_costs, self.output_token_costs, self.agent_label)
+            return LLMCostsTracker(llm_tracker, token_tracker)
         return _null_context()
 
     def track_comm_latency(self):
@@ -86,6 +94,20 @@ class AgentExperimentLogger:
                 f.write("agent,timestamp,latency_ms\n")
                 for row in self.state_retrieval_latencies:
                     f.write(f"{row['agent']},{row['timestamp']},{row['latency_ms']:.2f}\n")
+
+        # Export input token costs
+        if self.experiment.llm_latency:
+            with open(self.input_tokens_csv, "w") as f:
+                f.write("agent,mode,timestamp,thread_id,input_tokens\n")
+                for row in self.input_token_costs:
+                    f.write(f"{row['agent']},{row['mode']},{row['timestamp']},{row['thread_id']},{row['input_tokens']}\n")
+
+        # Export output token costs
+        if self.experiment.llm_latency:
+            with open(self.output_tokens_csv, "w") as f:
+                f.write("agent,mode,timestamp,thread_id,output_tokens\n")
+                for row in self.output_token_costs:
+                    f.write(f"{row['agent']},{row['mode']},{row['timestamp']},{row['thread_id']},{row['output_tokens']}\n")
 
 
 class _null_context:

@@ -74,8 +74,9 @@ class BaseGroupChatAgent(RoutedAgent):
         self._chat_history.append(
             UserMessage(content=f"Transferred to {self.id.type}, adopt the persona immediately.", source="system")
         )
-        with self._logger.track_llm("chat_completion"):
+        with self._logger.track_llm("chat_completion") as llm_action_tracker:
             completion = await self._model_client.create([self._system_message] + self._chat_history)
+            llm_action_tracker.record_tokens_from_completion(completion)
         assert isinstance(completion.content, str)
         new_message = AssistantMessage(content=completion.content, source=self.id.type)
         self._chat_history.append(new_message)
@@ -100,10 +101,11 @@ class BaseGroupChatAgent(RoutedAgent):
                 #remember to switch back to parsed eventually
                 send_state_update(self.id.type, state.content, self._state_server_url+"/update_state")
 
-        with self._logger.track_llm("piggybacked_requirements"):
+        with self._logger.track_llm("piggybacked_requirements") as llm_piggyback_tracker:
             new_completion = await self._model_client.create(
                     [self._system_message] +[SystemMessage(content="Please complete your writer or editor sentence here and then below the sentence print STATE----- and report the state on the next line according to the format in the following instructions:")] + [self._state_report_message] + [prev_state_message] + [new_message] + [SystemMessage(content="Please remember to print both your contribution to the conversation AND the state message in your response")]
                 )
+            llm_piggyback_tracker.record_tokens_from_completion(new_completion)
         print("Piggyback completion content:", new_completion.content)
         new_state = AssistantMessage(content=state.content, source=self.id.type)
         self._state_history.append(new_state)

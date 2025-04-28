@@ -98,3 +98,47 @@ class SingleAgentMemorySampler:
             f.write("agent,timestamp,rss_mb\n")
             for t, rss in self.samples:
                 f.write(f"{agent_label},{t},{rss:.2f}\n")
+
+class TokenCostTracker:
+    def __init__(self, input_token_costs: List[Dict], output_token_costs: List[Dict], agent_label: str):
+        self.input_token_costs = input_token_costs
+        self.output_token_costs = output_token_costs
+        self.agent_label = agent_label
+     
+
+    def record_tokens(self, input_tokens: int, output_tokens: int):
+        input_cost = {
+            "agent": self.agent_label,
+            "input_tokens": input_tokens,
+        }
+        output_cost = {
+            "agent": self.agent_label,
+            "output_tokens": output_tokens,
+        }
+        self.input_token_costs.append(input_cost)
+        self.output_token_costs.append(output_cost)
+    
+    def record_tokens_from_completion(self, completion_obj):
+        usage = getattr(completion_obj, "usage", None)
+        if usage:
+            self.record_tokens(usage.prompt_tokens, usage.completion_tokens)
+        else:
+            raise ValueError("No usage info found in completion object.")
+
+class LLMCostsTracker:
+    def __init__(self, llm_time_tracker: LLMTimeTracker, token_cost_tracker: TokenCostTracker):
+        self.llm_time_tracker = llm_time_tracker
+        self.token_cost_tracker = token_cost_tracker
+
+    def __enter__(self):
+        self.llm_time_tracker.__enter__()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.llm_time_tracker.__exit__(exc_type, exc_val, exc_tb)
+
+    def record_tokens(self, input_tokens: int, output_tokens: int):
+        self.token_cost_tracker.record_tokens(input_tokens, output_tokens)
+
+    def record_tokens_from_completion(self, completion_obj):
+        self.token_cost_tracker.record_tokens_from_completion(completion_obj)
