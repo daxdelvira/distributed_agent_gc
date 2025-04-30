@@ -41,7 +41,7 @@ class AgentExperimentLogger:
     def track_llm(self, function_name: str):
         if self.experiment.llm_latency:
             llm_tracker = LLMTimeTracker(self.llm_metrics, self.agent_label, function_name)
-            token_tracker = TokenCostTracker(self.input_token_costs, self.output_token_costs, self.agent_label)
+            token_tracker = TokenCostTracker(self.input_token_costs, self.output_token_costs, self.agent_label, function_name)
             return LLMCostsTracker(llm_tracker, token_tracker)
         return _null_context()
 

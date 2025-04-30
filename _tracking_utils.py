@@ -100,19 +100,22 @@ class SingleAgentMemorySampler:
                 f.write(f"{agent_label},{t},{rss:.2f}\n")
 
 class TokenCostTracker:
-    def __init__(self, input_token_costs: List[Dict], output_token_costs: List[Dict], agent_label: str):
+    def __init__(self, input_token_costs: List[Dict], output_token_costs: List[Dict], agent_label: str, function_name: str):
         self.input_token_costs = input_token_costs
         self.output_token_costs = output_token_costs
         self.agent_label = agent_label
+        self.function_name = function_name
      
 
     def record_tokens(self, input_tokens: int, output_tokens: int):
         input_cost = {
             "agent": self.agent_label,
+            "function": self.function_name,
             "input_tokens": input_tokens,
         }
         output_cost = {
             "agent": self.agent_label,
+            "function": self.function_name,
             "output_tokens": output_tokens,
         }
         self.input_token_costs.append(input_cost)
