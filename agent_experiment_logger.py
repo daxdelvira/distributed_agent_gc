@@ -100,7 +100,7 @@ class AgentExperimentLogger:
             with open(self.input_tokens_csv, "w") as f:
                 f.write("agent,input_tokens\n")
                 for row in self.input_token_costs:
-                    f.write(f"{row.get('agent', 'NA')},{row.get('input_tokens', 'NA')}\n")
+                    f.write(f"{row.get('agent', 'NA')},{row.get('function', 'NA')},{row.get('input_tokens', 'NA')}\n")
 
 
         # Export output token costs
@@ -108,7 +108,7 @@ class AgentExperimentLogger:
             with open(self.output_tokens_csv, "w") as f:
                 f.write("agent,output_tokens\n")
                 for row in self.output_token_costs:
-                    f.write(f"{row.get('agent', 'NA')},{row.get('output_tokens', 'NA')}\n")
+                    f.write(f"{row.get('agent', 'NA')},{row.get('function', 'NA')},{row.get('output_tokens', 'NA')}\n")
 
 
 
