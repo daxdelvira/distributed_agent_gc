@@ -26,14 +26,14 @@ from agent_experiment_logger import AgentExperimentLogger
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
-    return parser.parse_args()   
+    return parser.parse_args()
 
 def handle_sigint(signum, frame):
     print("[Editor Agent] Caught Ctrl+C — exporting metrics before exit...")
     logger.export_all()
     sys.exit(0)
 
-async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext, state_server_url: str):
+async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContext, logger: AgentExperimentLogger, state_server_url: str):
     set_all_log_levels(logging.ERROR)
     writer_agent_runtime = GrpcWorkerAgentRuntime(host_address=config.host.address)
     writer_agent_runtime.add_message_serializer(get_serializers([RequestToSpeak, GroupChatMessage, MessageChunk]))  # type: ignore[arg-type]
@@ -54,6 +54,7 @@ async def main(config: AppConfig, state_vars: dict, experiment: ExperimentContex
             state_vars=state_vars,
             experiment=experiment,
             state_server_url=state_server_url,
+            logger=logger,
             ui_config=config.ui_agent,
         ),
     )
@@ -85,4 +86,4 @@ if __name__ == "__main__":
     state_server_url = config_data["state_server_url"]
 
     signal.signal(signal.SIGINT, handle_sigint)
-    asyncio.run(main(load_config(), state_vars, experiment, state_server_url))
+    asyncio.run(main(load_config(), state_vars, experiment,logger, state_server_url))

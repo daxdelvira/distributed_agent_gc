@@ -36,6 +36,7 @@ class BaseGroupChatAgent(RoutedAgent):
         state_vars: dict,
         experiment: ExperimentContext,
         state_server_url: str,
+        logger: AgentExperimentLogger,
         system_message: str,
         ui_config: UIAgentConfig,
     ) -> None:
@@ -49,7 +50,7 @@ class BaseGroupChatAgent(RoutedAgent):
         self._state_schema = state_vars
         self._state_json_str = json.dumps(state_vars, indent=4)
         self._experiment = experiment
-        self._logger = AgentExperimentLogger(self._experiment, agent_label=self.id.type)  # will update below
+        self._logger = logger # will update below
         self._state_server_url = state_server_url
         self._state_report_message = SystemMessage(
             content="""

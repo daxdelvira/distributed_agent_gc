@@ -25,7 +25,7 @@ from agent_experiment_logger import AgentExperimentLogger
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="experiment_config.json", help="Path to the configuration file")
-    return parser.parse_args()   
+    return parser.parse_args()
 
 def handle_sigint(signum, frame):
     print("[Editor Agent] Caught Ctrl+C — exporting metrics before exit...")
@@ -55,6 +55,7 @@ async def main(config: AppConfig, experiment: ExperimentContext, logger: AgentEx
             state_vars=state_vars,
             experiment=experiment,
             state_server_url=state_server_url,
+            logger=logger,
             ui_config=config.ui_agent,
         ),
     )
