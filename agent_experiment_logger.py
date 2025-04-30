@@ -98,16 +98,18 @@ class AgentExperimentLogger:
         # Export input token costs
         if self.experiment.llm_latency:
             with open(self.input_tokens_csv, "w") as f:
-                f.write("agent,mode,timestamp,thread_id,input_tokens\n")
+                f.write("agent,input_tokens\n")
                 for row in self.input_token_costs:
-                    f.write(f"{row['agent']},{row['mode']},{row['timestamp']},{row['thread_id']},{row['input_tokens']}\n")
+                    f.write(f"{row.get('agent', 'NA')},{row.get('input_tokens', 'NA')}\n")
+
 
         # Export output token costs
         if self.experiment.llm_latency:
             with open(self.output_tokens_csv, "w") as f:
-                f.write("agent,mode,timestamp,thread_id,output_tokens\n")
+                f.write("agent,output_tokens\n")
                 for row in self.output_token_costs:
-                    f.write(f"{row['agent']},{row['mode']},{row['timestamp']},{row['thread_id']},{row['output_tokens']}\n")
+                    f.write(f"{row.get('agent', 'NA')},{row.get('output_tokens', 'NA')}\n")
+
 
 
 class _null_context:
